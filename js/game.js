@@ -107,10 +107,10 @@ const MineWars = (() => {
     function setConfig(key, val) {
         if (!state.isHost) return; state.config[key] = val;
         if (key === 'size') {
-            document.querySelectorAll('.cfg-btn-size').forEach(b => {
-                b.classList.remove('ring-1', 'ring-indigo-500', 'text-indigo-300');
-                if (b.dataset.val === val) b.classList.add('ring-1', 'ring-indigo-500', 'text-indigo-300');
-            });
+            const labels = { 'small': 'Small (10x10)', 'medium': 'Medium (16x16)', 'large': 'Large (20x20)', 'custom': 'Custom' };
+            const txt = document.getElementById('size-text');
+            if (txt) txt.innerText = labels[val] || 'Medium (16x16)';
+
             const customInputs = document.getElementById('custom-size-inputs');
             if (customInputs) customInputs.classList.toggle('hidden', val !== 'custom');
             if (val === 'custom') updateCustom();
@@ -118,7 +118,11 @@ const MineWars = (() => {
         syncLobby();
     }
 
-    function setSize(s) { setConfig('size', s); }
+    function toggleSizeDD() { document.getElementById('size-menu').classList.toggle('open'); }
+    function selectSizeUI(s) {
+        document.getElementById('size-menu').classList.remove('open');
+        setConfig('size', s);
+    }
     function updateCustom() {
         const r = parseInt(document.getElementById('inp-rows').value) || 20;
         const c = parseInt(document.getElementById('inp-cols').value) || 20;
@@ -139,7 +143,13 @@ const MineWars = (() => {
         document.getElementById('mode-text').innerText = { 'turn': 'Turn Based', 'race': 'Race', 'coop': 'Co-op' }[m];
         document.getElementById('mode-menu').classList.remove('open'); setConfig('mode', m);
     }
-    document.addEventListener('click', e => { if (!e.target.closest('.relative')) document.getElementById('mode-menu').classList.remove('open'); });
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.relative')) {
+            document.getElementById('mode-menu').classList.remove('open');
+            const sm = document.getElementById('size-menu');
+            if (sm) sm.classList.remove('open');
+        }
+    });
     function copyCode() { navigator.clipboard.writeText(state.code); ui.codeDisp.style.color = '#4ade80'; setTimeout(() => ui.codeDisp.style.color = '', 500); }
 
     // --- GAME LOGIC ---
@@ -423,5 +433,5 @@ const MineWars = (() => {
         el.style.top = (y * 100) + '%';
     }
 
-    return { initHost, joinInput, reset, copyCode, setConfig, setSize, updateCustom, updateSlider, toggleModeDD, selectModeUI, startGame, toggleSafeStart, showExitModal, requestRematch: () => { state.isHost ? startRematch() : (connMap['host'].send({ type: 'REMATCH' }), document.getElementById('rematch-status').innerText = "Sent...") }, leaveGame: () => { reset() } };
+    return { initHost, joinInput, reset, copyCode, setConfig, toggleSizeDD, selectSizeUI, updateCustom, updateSlider, toggleModeDD, selectModeUI, startGame, toggleSafeStart, showExitModal, requestRematch: () => { state.isHost ? startRematch() : (connMap['host'].send({ type: 'REMATCH' }), document.getElementById('rematch-status').innerText = "Sent...") }, leaveGame: () => { reset() } };
 })();

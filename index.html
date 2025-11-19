@@ -128,7 +128,8 @@
                                     class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left">
                                     <div
                                         class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-slate-400 text-xs">
-                                        <i class="fas fa-chess-knight"></i></div>
+                                        <i class="fas fa-chess-knight"></i>
+                                    </div>
                                     <div>
                                         <div class="text-xs font-bold text-slate-200">Turn Based (FFA)</div>
                                     </div>
@@ -137,7 +138,8 @@
                                     class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left">
                                     <div
                                         class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-slate-400 text-xs">
-                                        <i class="fas fa-flag-checkered"></i></div>
+                                        <i class="fas fa-flag-checkered"></i>
+                                    </div>
                                     <div>
                                         <div class="text-xs font-bold text-slate-200">Speed Race</div>
                                     </div>
@@ -146,181 +148,134 @@
                                     class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left">
                                     <div
                                         class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-slate-400 text-xs">
-                                        <i class="fas fa-users"></i></div>
+                                        <i class="fas fa-users"></i>
+                                    </div>
                                     <div>
                                         <div class="text-xs font-bold text-slate-200">Co-op Survival</div>
+                                        <div class="text-[10px] text-slate-400">Guaranteed opening (No Guess)</div>
                                     </div>
-                                </button>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="toggle-safe" class="toggle-checkbox"
+                                            onclick="MineWars.toggleSafeStart(this)">
+                                        <label for="toggle-safe" class="toggle-label">
+                                            <div class="toggle-dot"></div>
+                                        </label>
+                                    </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Size Controls -->
-                    <div class="bg-white/5 p-3 rounded-lg space-y-3">
-                        <div class="flex justify-between items-center">
-                            <label class="text-xs font-bold text-white">Grid Size</label>
-                            <div class="flex gap-2">
-                                <button onclick="MineWars.setSize('small')"
-                                    class="cfg-btn-size px-2 py-1 rounded text-[10px] font-bold bg-white/10 hover:bg-white/20 text-slate-300"
-                                    data-val="small">S</button>
-                                <button onclick="MineWars.setSize('medium')"
-                                    class="cfg-btn-size px-2 py-1 rounded text-[10px] font-bold bg-white/10 hover:bg-white/20 text-slate-300"
-                                    data-val="medium">M</button>
-                                <button onclick="MineWars.setSize('large')"
-                                    class="cfg-btn-size px-2 py-1 rounded text-[10px] font-bold bg-white/10 hover:bg-white/20 text-slate-300"
-                                    data-val="large">L</button>
-                                <button onclick="MineWars.setSize('custom')"
-                                    class="cfg-btn-size px-2 py-1 rounded text-[10px] font-bold bg-white/10 hover:bg-white/20 text-slate-300"
-                                    data-val="custom">?</button>
-                            </div>
-                        </div>
-                        <div id="custom-size-inputs" class="hidden grid grid-cols-3 gap-2">
+                            <!-- Player Slider -->
                             <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Rows</label>
-                                <input type="number" id="inp-rows" value="20"
-                                    class="w-full bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-white text-center"
-                                    onchange="MineWars.updateCustom()">
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Cols</label>
-                                <input type="number" id="inp-cols" value="20"
-                                    class="w-full bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-white text-center"
-                                    onchange="MineWars.updateCustom()">
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Mines</label>
-                                <input type="number" id="inp-mines" value="50"
-                                    class="w-full bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-white text-center"
-                                    onchange="MineWars.updateCustom()">
+                                <div class="flex justify-between mb-4">
+                                    <label class="text-xs text-slate-400 font-bold uppercase">Max Players</label>
+                                    <span id="pl-limit"
+                                        class="text-sm font-bold text-white bg-white/10 px-2 rounded">4</span>
+                                </div>
+                                <div class="relative h-6 flex items-center">
+                                    <input type="range" min="2" max="8" value="4" id="slider-players"
+                                        class="range-slider relative z-10" oninput="MineWars.updateSlider(this)">
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Safe Start Toggle -->
-                    <div class="flex items-center justify-between bg-white/5 p-3 rounded-lg">
-                        <div>
-                            <div class="text-xs font-bold text-white">Safe Start</div>
-                            <div class="text-[10px] text-slate-400">Guaranteed opening (No Guess)</div>
+                        <div id="guest-controls"
+                            class="mt-auto text-center p-6 bg-white/5 rounded-xl border border-white/5 border-dashed">
+                            <div class="text-xs text-slate-400 mb-2 font-mono">STATUS: WAITING_FOR_HOST</div>
+                            <div class="flex justify-center gap-1.5">
+                                <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></span>
+                                <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"
+                                    style="animation-delay: 0.1s"></span>
+                                <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"
+                                    style="animation-delay: 0.2s"></span>
+                            </div>
                         </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="toggle-safe" class="toggle-checkbox"
-                                onclick="MineWars.toggleSafeStart(this)">
-                            <label for="toggle-safe" class="toggle-label">
-                                <div class="toggle-dot"></div>
-                            </label>
-                        </div>
-                    </div>
 
-                    <!-- Player Slider -->
-                    <div>
-                        <div class="flex justify-between mb-4">
-                            <label class="text-xs text-slate-400 font-bold uppercase">Max Players</label>
-                            <span id="pl-limit" class="text-sm font-bold text-white bg-white/10 px-2 rounded">4</span>
-                        </div>
-                        <div class="relative h-6 flex items-center">
-                            <input type="range" min="2" max="8" value="4" id="slider-players"
-                                class="range-slider relative z-10" oninput="MineWars.updateSlider(this)">
+                        <div id="start-btn-container" class="mt-auto hidden">
+                            <button onclick="MineWars.startGame()"
+                                class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2">
+                                <span>START GAME</span> <i class="fas fa-play text-xs"></i>
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <div id="guest-controls"
-                    class="mt-auto text-center p-6 bg-white/5 rounded-xl border border-white/5 border-dashed">
-                    <div class="text-xs text-slate-400 mb-2 font-mono">STATUS: WAITING_FOR_HOST</div>
-                    <div class="flex justify-center gap-1.5">
-                        <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></span>
-                        <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"
-                            style="animation-delay: 0.1s"></span>
-                        <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"
-                            style="animation-delay: 0.2s"></span>
-                    </div>
-                </div>
-
-                <div id="start-btn-container" class="mt-auto hidden">
-                    <button onclick="MineWars.startGame()"
-                        class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2">
-                        <span>START GAME</span> <i class="fas fa-play text-xs"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex-1 glass-panel rounded-3xl p-8 flex flex-col relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-6"><span id="lobby-count"
-                        class="bg-white/10 px-3 py-1 rounded-full text-xs font-mono text-slate-300 border border-white/10">1/4</span>
-                </div>
-                <h3 class="font-bold text-white mb-6 text-xl">Connected Units</h3>
-                <div id="lobby-roster"
-                    class="grid grid-cols-1 sm:grid-cols-2 gap-4 content-start flex-1 overflow-y-auto pr-2"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- GAME -->
-    <div id="game-view" class="hidden absolute inset-0 z-30 bg-[#0f172a] flex flex-col">
-        <header
-            class="h-16 px-6 flex justify-between items-center bg-black/20 border-b border-white/5 backdrop-blur-md flex-shrink-0">
-            <div class="flex items-center gap-4">
-                <button onclick="MineWars.showExitModal()"
-                    class="w-8 h-8 rounded glass-button flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20"><i
-                        class="fas fa-times"></i></button>
-                <div id="game-turn-indicator"
-                    class="px-3 py-1 rounded bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30 hidden animate-pulse">
-                    YOUR TURN</div>
-            </div>
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-3 glass-panel px-4 py-1.5 rounded-full">
-                    <i class="fas fa-bomb text-red-400 text-xs"></i>
-                    <span id="game-mine-count" class="font-mono font-bold text-lg text-white">00</span>
-                </div>
-                <div class="hidden md:flex items-center gap-2" id="game-player-bar"></div>
-            </div>
-        </header>
-
-        <main class="flex-1 flex items-center justify-center p-4 overflow-hidden relative w-full">
-            <div id="game-grid" class="shadow-2xl"></div>
-
-            <!-- Custom Exit Modal -->
-            <div id="exit-modal"
-                class="hidden absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center fade-enter">
-                <div
-                    class="glass-panel p-6 rounded-2xl text-center max-w-xs w-full border border-white/10 shadow-2xl transform scale-105">
-                    <div class="text-xl font-bold text-white mb-2">Abort Protocol?</div>
-                    <p class="text-sm text-slate-400 mb-6">This will disconnect you from the current session.</p>
-                    <div class="flex gap-3">
-                        <button onclick="document.getElementById('exit-modal').classList.add('hidden')"
-                            class="flex-1 py-2 rounded-lg glass-button text-slate-300">Cancel</button>
-                        <button onclick="MineWars.reset()"
-                            class="flex-1 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30">Confirm</button>
+                    <div class="flex-1 glass-panel rounded-3xl p-8 flex flex-col relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-6"><span id="lobby-count"
+                                class="bg-white/10 px-3 py-1 rounded-full text-xs font-mono text-slate-300 border border-white/10">1/4</span>
+                        </div>
+                        <h3 class="font-bold text-white mb-6 text-xl">Connected Units</h3>
+                        <div id="lobby-roster"
+                            class="grid grid-cols-1 sm:grid-cols-2 gap-4 content-start flex-1 overflow-y-auto pr-2">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div id="end-screen"
-                class="hidden absolute inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center fade-enter">
-                <div
-                    class="glass-panel p-8 rounded-3xl text-center max-w-sm w-full mx-4 transform scale-100 transition-transform border border-white/10 shadow-2xl">
-                    <div id="end-icon" class="text-6xl mb-6 animate-bounce"></div>
-                    <h2 id="end-title" class="text-4xl font-bold text-white mb-2 tracking-tight">GAME OVER</h2>
-                    <p id="end-msg" class="text-slate-400 mb-8 font-medium">Status Report</p>
-                    <div class="space-y-3">
-                        <button id="btn-rematch" onclick="MineWars.requestRematch()"
-                            class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg">Rematch</button>
-                        <button onclick="MineWars.leaveGame()"
-                            class="w-full py-3 glass-button rounded-xl font-bold text-slate-300 hover:bg-white/10">Return
-                            to Lobby</button>
+            <!-- GAME -->
+            <div id="game-view" class="hidden absolute inset-0 z-30 bg-[#0f172a] flex flex-col">
+                <header
+                    class="h-16 px-6 flex justify-between items-center bg-black/20 border-b border-white/5 backdrop-blur-md flex-shrink-0">
+                    <div class="flex items-center gap-4">
+                        <button onclick="MineWars.showExitModal()"
+                            class="w-8 h-8 rounded glass-button flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20"><i
+                                class="fas fa-times"></i></button>
+                        <div id="game-turn-indicator"
+                            class="px-3 py-1 rounded bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30 hidden animate-pulse">
+                            YOUR TURN</div>
                     </div>
-                    <div id="rematch-status" class="mt-4 text-xs text-slate-500 h-4 font-mono"></div>
-                </div>
-            </div>
-        </main>
-    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-3 glass-panel px-4 py-1.5 rounded-full">
+                            <i class="fas fa-bomb text-red-400 text-xs"></i>
+                            <span id="game-mine-count" class="font-mono font-bold text-lg text-white">00</span>
+                        </div>
+                        <div class="hidden md:flex items-center gap-2" id="game-player-bar"></div>
+                    </div>
+                </header>
 
-    <script src="js/utils.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/game.js"></script>
-    <script>
-        App.init();
-    </script>
+                <main class="flex-1 flex items-center justify-center p-4 overflow-hidden relative w-full">
+                    <div id="game-grid" class="shadow-2xl"></div>
+
+                    <!-- Custom Exit Modal -->
+                    <div id="exit-modal"
+                        class="hidden absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center fade-enter">
+                        <div
+                            class="glass-panel p-6 rounded-2xl text-center max-w-xs w-full border border-white/10 shadow-2xl transform scale-105">
+                            <div class="text-xl font-bold text-white mb-2">Abort Protocol?</div>
+                            <p class="text-sm text-slate-400 mb-6">This will disconnect you from the current session.
+                            </p>
+                            <div class="flex gap-3">
+                                <button onclick="document.getElementById('exit-modal').classList.add('hidden')"
+                                    class="flex-1 py-2 rounded-lg glass-button text-slate-300">Cancel</button>
+                                <button onclick="MineWars.reset()"
+                                    class="flex-1 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30">Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="end-screen"
+                        class="hidden absolute inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center fade-enter">
+                        <div
+                            class="glass-panel p-8 rounded-3xl text-center max-w-sm w-full mx-4 transform scale-100 transition-transform border border-white/10 shadow-2xl">
+                            <div id="end-icon" class="text-6xl mb-6 animate-bounce"></div>
+                            <h2 id="end-title" class="text-4xl font-bold text-white mb-2 tracking-tight">GAME OVER</h2>
+                            <p id="end-msg" class="text-slate-400 mb-8 font-medium">Status Report</p>
+                            <div class="space-y-3">
+                                <button id="btn-rematch" onclick="MineWars.requestRematch()"
+                                    class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg">Rematch</button>
+                                <button onclick="MineWars.leaveGame()"
+                                    class="w-full py-3 glass-button rounded-xl font-bold text-slate-300 hover:bg-white/10">Return
+                                    to Lobby</button>
+                            </div>
+                            <div id="rematch-status" class="mt-4 text-xs text-slate-500 h-4 font-mono"></div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+
+            <script src="js/utils.js"></script>
+            <script src="js/app.js"></script>
+            <script src="js/game.js"></script>
+            <script>
+                App.init();
+            </script>
 </body>
 
 </html>
