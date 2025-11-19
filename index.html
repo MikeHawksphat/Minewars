@@ -4,903 +4,300 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MineWars: Multiplayer Minesweeper</title>
+    <title>PRISM | Multiplayer Protocol</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #1f2937;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #4b5563;
-            border-radius: 4px;
-        }
-
-        /* Tile Styles */
-        .tile {
-            transition: background-color 0.2s, transform 0.1s;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-            position: relative;
-        }
-
-        .tile-closed {
-            background-color: #374151;
-            /* gray-700 */
-            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-        }
-
-        .tile-closed:hover {
-            background-color: #4b5563;
-        }
-
-        /* gray-600 */
-        .tile-open {
-            background-color: #1f2937;
-        }
-
-        /* gray-800 */
-
-        /* Number Colors */
-        .num-1 {
-            color: #60a5fa;
-        }
-
-        .num-2 {
-            color: #34d399;
-        }
-
-        .num-3 {
-            color: #f87171;
-        }
-
-        .num-4 {
-            color: #818cf8;
-        }
-
-        .num-5 {
-            color: #fbbf24;
-        }
-
-        .num-6 {
-            color: #2dd4bf;
-        }
-
-        .num-7 {
-            color: #e879f9;
-        }
-
-        .num-8 {
-            color: #9ca3af;
-        }
-
-        /* Turn Indicators */
-        .turn-active-border {
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.4);
-            border-color: #3b82f6;
-        }
-
-        @keyframes pulse-bg {
-            0% {
-                background-color: rgba(59, 130, 246, 0);
-            }
-
-            50% {
-                background-color: rgba(59, 130, 246, 0.1);
-            }
-
-            100% {
-                background-color: rgba(59, 130, 246, 0);
-            }
-        }
-
-        .my-turn-bg {
-            animation: pulse-bg 2s infinite;
-        }
-
-        /* Opponent Cursor */
-        .opponent-cursor {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            border: 2px solid #ef4444;
-            /* Red border */
-            background-color: rgba(239, 68, 68, 0.2);
-            z-index: 10;
-            border-radius: 2px;
-            transition: all 0.1s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .opponent-cursor::after {
-            content: '\f245';
-            /* FontAwesome Mouse Pointer */
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            color: #ef4444;
-            font-size: 12px;
-            position: absolute;
-            bottom: -10px;
-            right: -10px;
-            text-shadow: 0 1px 2px black;
-        }
-
-        /* Loader */
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 3px solid #3b82f6;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
-<body class="bg-gray-900 text-white h-screen flex flex-col overflow-hidden font-sans">
+<body class="h-screen w-full flex flex-col text-sm selection:bg-indigo-500/30">
 
-    <!-- Header -->
-    <header class="p-3 bg-gray-800 border-b border-gray-700 flex justify-between items-center shadow-lg z-20">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-bomb text-red-500 text-xl"></i>
-            <h1 class="text-xl font-bold tracking-wider hidden sm:block">MINE<span class="text-blue-400">WARS</span>
-            </h1>
+    <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px]">
         </div>
+    </div>
 
-        <div class="flex items-center gap-4">
-            <div id="mode-badge"
-                class="hidden px-2 py-0.5 rounded text-xs font-bold bg-blue-900 text-blue-200 border border-blue-700 uppercase tracking-wide">
-                MODE
-            </div>
-            <div id="connection-status"
-                class="text-xs font-mono px-2 py-1 rounded bg-gray-700 text-gray-400 flex items-center gap-2">
-                <div class="w-2 h-2 rounded-full bg-red-500" id="status-dot"></div>
-                <span id="status-text">Offline</span>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 relative flex justify-center items-center p-2 sm:p-4 bg-gray-900">
-
-        <!-- Setup Screen (Lobby) -->
-        <div id="setup-screen"
-            class="w-full max-w-md bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl border border-gray-700 transform transition-all">
-            <div class="text-center mb-6">
-                <h2 class="text-2xl font-bold mb-1">MineWars Lobby</h2>
-                <p class="text-gray-400 text-sm">Select options to start.</p>
-            </div>
-
-            <!-- Host Options -->
-            <div id="host-controls" class="mb-6 space-y-4">
-                <!-- Game Mode Selection -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Game Mode</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="selectMode('turn')" id="mode-turn"
-                            class="mode-btn active-mode bg-blue-600 p-2 rounded text-xs sm:text-sm font-bold text-white border-2 border-blue-400 shadow-lg">
-                            Turn Based
-                        </button>
-                        <button onclick="selectMode('coop')" id="mode-coop"
-                            class="mode-btn bg-gray-700 p-2 rounded text-xs sm:text-sm font-bold text-gray-300 border-2 border-transparent hover:bg-gray-600">
-                            Co-op
-                        </button>
-                        <button onclick="selectMode('race')" id="mode-race"
-                            class="mode-btn bg-gray-700 p-2 rounded text-xs sm:text-sm font-bold text-gray-300 border-2 border-transparent hover:bg-gray-600">
-                            1v1 Race
-                        </button>
-                    </div>
-                    <p id="mode-desc" class="text-xs text-gray-400 mt-2 italic">Take turns. One mistake loses the game.
-                    </p>
-                </div>
-
-                <!-- Map Size Selection -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Map Size</label>
-                    <select id="map-size"
-                        class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500">
-                        <option value="small">Small (10x10, 15 Mines)</option>
-                        <option value="medium" selected>Medium (16x16, 40 Mines)</option>
-                        <option value="large">Large (20x20, 70 Mines)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Create/Join Buttons -->
-            <div id="lobby-actions" class="space-y-4">
-                <div id="create-area">
-                    <button id="btn-create"
-                        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2 shadow-lg">
-                        <i class="fas fa-plus-circle"></i> Create Room
-                    </button>
-                </div>
-
-                <div class="relative flex py-1 items-center">
-                    <div class="flex-grow border-t border-gray-600"></div>
-                    <span class="flex-shrink mx-4 text-gray-500 text-xs uppercase">Or Join</span>
-                    <div class="flex-grow border-t border-gray-600"></div>
-                </div>
-
-                <div class="flex gap-2">
-                    <input type="text" id="join-code-input" placeholder="CODE"
-                        class="w-full bg-gray-900 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-blue-500 font-mono uppercase tracking-widest text-center">
-                    <button id="btn-join"
-                        class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 rounded-lg transition whitespace-nowrap shadow-lg">
-                        Join
-                    </button>
-                </div>
-            </div>
-
-            <!-- Waiting Room (Hidden initially) -->
-            <div id="waiting-area" class="hidden text-center pt-4">
-                <p class="text-gray-400 text-sm mb-2">Room Ready. Waiting for player...</p>
-                <div class="flex items-center justify-center gap-2 mb-6">
-                    <div id="room-code-display"
-                        class="text-4xl font-mono font-bold text-white tracking-widest bg-gray-900 px-6 py-3 rounded-lg border border-blue-500/50 shadow-inner">
-                        ...</div>
-                    <button onclick="copyCode()"
-                        class="p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition" title="Copy">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-                <div class="flex items-center justify-center gap-2 text-blue-400 text-sm animate-pulse">
-                    <div class="loader border-t-blue-400"></div>
-                    <span>Syncing...</span>
-                </div>
-                <button onclick="location.reload()"
-                    class="mt-6 text-xs text-red-400 hover:text-red-300 underline">Cancel</button>
-            </div>
-        </div>
-
-        <!-- Game Screen -->
-        <div id="game-screen" class="hidden w-full h-full max-w-4xl flex flex-col">
-
-            <!-- Game Info Bar -->
+    <!-- LOGIN -->
+    <div id="login-view" class="absolute inset-0 z-50 flex items-center justify-center bg-[#020617] fade-enter">
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md text-center border-t border-indigo-500/30">
             <div
-                class="flex justify-between items-center mb-2 sm:mb-4 bg-gray-800 p-2 sm:p-3 rounded-lg shadow-md border border-gray-700">
-                <div class="flex-1">
-                    <div id="player-indicator"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700 border border-gray-600 transition-all duration-300">
-                        <i class="fas fa-user text-sm"></i>
-                        <span id="turn-text" class="font-bold text-sm sm:text-base">Initializing...</span>
+                class="w-16 h-16 bg-indigo-500/10 rounded-xl mx-auto flex items-center justify-center mb-6 text-indigo-400 text-2xl">
+                <i class="fas fa-fingerprint"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-2">Identify Protocol</h1>
+            <input id="username-input" type="text" placeholder="CALLSIGN" maxlength="12"
+                class="w-full glass-button p-4 rounded-xl text-center font-mono tracking-widest text-lg focus:outline-none focus:border-indigo-500 uppercase mb-4 bg-black/20">
+            <button onclick="App.login()"
+                class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20">INITIALIZE</button>
+        </div>
+    </div>
+
+    <!-- HUB -->
+    <div id="hub-view" class="hidden flex-1 flex flex-col relative z-10 fade-enter h-full">
+        <nav class="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-black/20 backdrop-blur-md">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-8 h-8 rounded bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white">
+                    P</div>
+                <span class="font-bold tracking-tight text-white">PRISM</span>
+            </div>
+            <div class="text-right">
+                <div id="user-display-name" class="font-bold text-white">GUEST</div>
+                <div class="text-[10px] text-emerald-400 uppercase tracking-wider">Connected</div>
+            </div>
+        </nav>
+
+        <main class="flex-1 flex items-center justify-center p-6">
+            <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div
+                    class="glass-panel rounded-3xl p-8 relative overflow-hidden group hover:border-indigo-500/30 transition-colors cursor-default">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity"><i
+                            class="fas fa-server text-9xl text-indigo-500"></i></div>
+                    <div class="relative z-10 h-full flex flex-col">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center mb-6 text-indigo-400 text-xl">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-2">Host Session</h2>
+                        <p class="text-slate-400 mb-8">Initialize a new MineWars instance. You act as the server.</p>
+                        <button onclick="MineWars.initHost()"
+                            class="mt-auto w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-3">Create
+                            Lobby</button>
+                    </div>
+                </div>
+                <div
+                    class="glass-panel rounded-3xl p-8 relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity"><i
+                            class="fas fa-satellite-dish text-9xl text-emerald-500"></i></div>
+                    <div class="relative z-10 h-full flex flex-col">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-6 text-emerald-400 text-xl">
+                            <i class="fas fa-wifi"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-2">Join Frequency</h2>
+                        <p class="text-slate-400 mb-8">Connect using a 4-character room code.</p>
+                        <div class="mt-auto space-y-3">
+                            <input id="direct-code-input" type="text" placeholder="ENTER CODE"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-center font-mono text-lg tracking-[0.2em] text-white placeholder-slate-600 uppercase focus:outline-none focus:border-emerald-500/50">
+                            <button onclick="MineWars.joinInput()"
+                                class="w-full py-4 glass-button text-emerald-400 hover:bg-emerald-500/10 rounded-xl font-bold">Connect</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- LOBBY -->
+    <div id="lobby-view" class="hidden fixed inset-0 z-20 bg-[#020617] flex items-center justify-center fade-enter">
+        <div class="w-full max-w-6xl h-full md:h-[90vh] flex flex-col md:flex-row gap-6 p-6">
+            <div class="w-full md:w-1/3 glass-panel rounded-3xl p-8 flex flex-col relative overflow-y-auto">
+                <button onclick="App.leaveLobby()" class="absolute top-6 left-6 text-slate-500 hover:text-white"><i
+                        class="fas fa-arrow-left"></i></button>
+                <div class="mt-8 mb-8 text-center">
+                    <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Session Code</div>
+                    <div id="lobby-code-display"
+                        class="text-5xl font-mono font-bold text-white tracking-widest select-all cursor-pointer hover:text-indigo-300"
+                        onclick="MineWars.copyCode()">----</div>
+                </div>
+
+                <div id="host-controls" class="space-y-8 hidden">
+                    <!-- Size -->
+                    <div>
+                        <label class="text-xs text-slate-400 font-bold uppercase block mb-3">Grid Size</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="MineWars.setConfig('size', 'small')"
+                                class="cfg-btn-size p-3 rounded-lg bg-white/5 text-xs font-medium hover:bg-white/10"
+                                data-val="small">10x10</button>
+                            <button onclick="MineWars.setConfig('size', 'medium')"
+                                class="cfg-btn-size p-3 rounded-lg bg-white/5 text-xs font-medium hover:bg-white/10 ring-1 ring-indigo-500 text-indigo-300"
+                                data-val="medium">16x16</button>
+                            <button onclick="MineWars.setConfig('size', 'large')"
+                                class="cfg-btn-size p-3 rounded-lg bg-white/5 text-xs font-medium hover:bg-white/10"
+                                data-val="large">20x20</button>
+                        </div>
+                    </div>
+
+                    <!-- Mode Dropdown -->
+                    <div class="relative">
+                        <label class="text-xs text-slate-400 font-bold uppercase block mb-3">Game Mode</label>
+                        <button id="mode-trigger"
+                            class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-left flex justify-between items-center hover:border-white/20"
+                            onclick="MineWars.toggleModeDD()">
+                            <div class="flex items-center gap-3">
+                                <div id="mode-icon"
+                                    class="w-6 h-6 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs">
+                                    <i class="fas fa-chess-knight"></i>
+                                </div>
+                                <span id="mode-text" class="font-bold text-slate-200">Turn Based (FFA)</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-slate-500 text-xs"></i>
+                        </button>
+                        <div id="mode-menu"
+                            class="dd-menu absolute top-full left-0 w-full mt-2 bg-[#0f172a] border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl">
+                            <div class="p-1 space-y-1">
+                                <button onclick="MineWars.selectModeUI('turn')"
+                                    class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left">
+                                    <div
+                                        class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-slate-400 text-xs">
+                                        <i class="fas fa-chess-knight"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-200">Turn Based (FFA)</div>
+                                    </div>
+                                </button>
+                                <button onclick="MineWars.selectModeUI('race')"
+                                    class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left">
+                                    <div
+                                        class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-slate-400 text-xs">
+                                        <i class="fas fa-flag-checkered"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-200">Speed Race</div>
+                                    </div>
+                                </button>
+                                <button onclick="MineWars.selectModeUI('coop')"
+                                    class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left">
+                                    <div
+                                        class="w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-slate-400 text-xs">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-200">Co-op Survival</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Safe Start Toggle (Corrected) -->
+                    <div class="flex items-center justify-between bg-white/5 p-3 rounded-lg">
+                        <div>
+                            <div class="text-xs font-bold text-white">Safe Start</div>
+                            <div class="text-[10px] text-slate-400">Guaranteed opening (No Guess)</div>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="toggle-safe" class="toggle-checkbox"
+                                onclick="MineWars.toggleSafeStart(this)">
+                            <label for="toggle-safe" class="toggle-label">
+                                <div class="toggle-dot"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Player Slider -->
+                    <div>
+                        <div class="flex justify-between mb-4">
+                            <label class="text-xs text-slate-400 font-bold uppercase">Max Players</label>
+                            <span id="pl-limit" class="text-sm font-bold text-white bg-white/10 px-2 rounded">4</span>
+                        </div>
+                        <div class="relative h-6 flex items-center">
+                            <input type="range" min="2" max="8" value="4" id="slider-players"
+                                class="range-slider relative z-10" oninput="MineWars.updateSlider(this)">
+                        </div>
                     </div>
                 </div>
 
-                <!-- For Race Mode Score -->
-                <div id="race-score" class="hidden flex-1 text-center text-xs sm:text-sm font-mono text-gray-300">
-                    <span class="text-blue-400">YOU: <span id="my-progress">0%</span></span>
-                    <span class="mx-2">|</span>
-                    <span class="text-red-400">THEM: <span id="opp-progress">0%</span></span>
+                <div id="guest-controls"
+                    class="mt-auto text-center p-6 bg-white/5 rounded-xl border border-white/5 border-dashed">
+                    <div class="text-xs text-slate-400 mb-2 font-mono">STATUS: WAITING_FOR_HOST</div>
+                    <div class="flex justify-center gap-1.5">
+                        <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></span>
+                        <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"
+                            style="animation-delay: 0.1s"></span>
+                        <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"
+                            style="animation-delay: 0.2s"></span>
+                    </div>
                 </div>
 
-                <div class="flex-1 text-right text-gray-400 text-xs sm:text-sm font-mono">
-                    Mines: <span id="mine-count" class="text-red-400 font-bold">0</span>
+                <div id="start-btn-container" class="mt-auto hidden">
+                    <button onclick="MineWars.startGame()"
+                        class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2">
+                        <span>START GAME</span> <i class="fas fa-play text-xs"></i>
+                    </button>
                 </div>
             </div>
 
-            <!-- Game Grid Container -->
-            <div id="grid-container"
-                class="flex-1 flex justify-center items-center overflow-auto bg-gray-900/50 rounded-lg border border-gray-700 p-2 relative transition-all duration-500">
-                <div id="grid" class="grid gap-0.5 sm:gap-1 select-none mx-auto shadow-2xl">
-                    <!-- Grid items generated by JS -->
+            <div class="flex-1 glass-panel rounded-3xl p-8 flex flex-col relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-6"><span id="lobby-count"
+                        class="bg-white/10 px-3 py-1 rounded-full text-xs font-mono text-slate-300 border border-white/10">1/4</span>
                 </div>
-
-                <!-- Game Over Overlay -->
-                <div id="game-over-modal"
-                    class="hidden absolute inset-0 bg-black/85 backdrop-blur-sm flex justify-center items-center z-30 rounded-lg">
-                    <div
-                        class="text-center p-8 bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl w-11/12 max-w-sm transform transition-all animate-[fadeIn_0.3s_ease-out]">
-                        <div id="game-over-icon" class="text-6xl mb-4"></div>
-                        <h2 id="game-over-title" class="text-3xl font-bold text-white mb-2">Game Over</h2>
-                        <p id="game-over-msg" class="text-gray-300 mb-6">Result text here</p>
-                        <button onclick="requestRematch()" id="rematch-btn"
-                            class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full transition shadow-lg shadow-blue-500/20 flex items-center justify-center mx-auto gap-2">
-                            <i class="fas fa-redo"></i> Rematch
-                        </button>
-                        <div id="rematch-status" class="mt-4 text-sm text-gray-400 min-h-[20px]"></div>
-                    </div>
-                </div>
+                <h3 class="font-bold text-white mb-6 text-xl">Connected Units</h3>
+                <div id="lobby-roster"
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-4 content-start flex-1 overflow-y-auto pr-2"></div>
             </div>
         </div>
+    </div>
 
-    </main>
+    <!-- GAME -->
+    <div id="game-view" class="hidden absolute inset-0 z-30 bg-[#0f172a] flex flex-col">
+        <header
+            class="h-16 px-6 flex justify-between items-center bg-black/20 border-b border-white/5 backdrop-blur-md flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <button onclick="MineWars.showExitModal()"
+                    class="w-8 h-8 rounded glass-button flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20"><i
+                        class="fas fa-times"></i></button>
+                <div id="game-turn-indicator"
+                    class="px-3 py-1 rounded bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30 hidden animate-pulse">
+                    YOUR TURN</div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-3 glass-panel px-4 py-1.5 rounded-full">
+                    <i class="fas fa-bomb text-red-400 text-xs"></i>
+                    <span id="game-mine-count" class="font-mono font-bold text-lg text-white">00</span>
+                </div>
+                <div class="hidden md:flex items-center gap-2" id="game-player-bar"></div>
+            </div>
+        </header>
 
+        <main class="flex-1 flex items-center justify-center p-4 overflow-hidden relative w-full">
+            <div id="game-grid" class="shadow-2xl"></div>
+
+            <!-- Custom Exit Modal -->
+            <div id="exit-modal"
+                class="hidden absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center fade-enter">
+                <div
+                    class="glass-panel p-6 rounded-2xl text-center max-w-xs w-full border border-white/10 shadow-2xl transform scale-105">
+                    <div class="text-xl font-bold text-white mb-2">Abort Protocol?</div>
+                    <p class="text-sm text-slate-400 mb-6">This will disconnect you from the current session.</p>
+                    <div class="flex gap-3">
+                        <button onclick="document.getElementById('exit-modal').classList.add('hidden')"
+                            class="flex-1 py-2 rounded-lg glass-button text-slate-300">Cancel</button>
+                        <button onclick="MineWars.reset()"
+                            class="flex-1 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30">Confirm</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="end-screen"
+                class="hidden absolute inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center fade-enter">
+                <div
+                    class="glass-panel p-8 rounded-3xl text-center max-w-sm w-full mx-4 transform scale-100 transition-transform border border-white/10 shadow-2xl">
+                    <div id="end-icon" class="text-6xl mb-6 animate-bounce"></div>
+                    <h2 id="end-title" class="text-4xl font-bold text-white mb-2 tracking-tight">GAME OVER</h2>
+                    <p id="end-msg" class="text-slate-400 mb-8 font-medium">Status Report</p>
+                    <div class="space-y-3">
+                        <button id="btn-rematch" onclick="MineWars.requestRematch()"
+                            class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg">Rematch</button>
+                        <button onclick="MineWars.leaveGame()"
+                            class="w-full py-3 glass-button rounded-xl font-bold text-slate-300 hover:bg-white/10">Return
+                            to Lobby</button>
+                    </div>
+                    <div id="rematch-status" class="mt-4 text-xs text-slate-500 h-4 font-mono"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/game.js"></script>
     <script>
-        /* --- Configuration --- */
-        const APP_PREFIX = 'tbs-mines-v2-';
-
-        const PRESETS = {
-            small: { rows: 10, cols: 10, mines: 15 },
-            medium: { rows: 16, cols: 16, mines: 40 },
-            large: { rows: 20, cols: 20, mines: 70 }
-        };
-
-        // State
-        let config = {
-            mode: 'turn', // 'turn', 'coop', 'race'
-            size: 'medium',
-            rows: 16, cols: 16, mines: 40
-        };
-
-        let peer = null;
-        let conn = null;
-        let myId = null;
-        let myCode = null;
-        let isHost = false;
-        let gameActive = false;
-
-        let board = []; // My local board state
-        let myTurn = false;
-        let minesRemaining = 0;
-        let clearedCount = 0;
-        let totalSafe = 0;
-
-        // Sync State
-        let lastHoveredTile = { r: -1, c: -1 };
-        let opponentHoveredTile = { r: -1, c: -1 };
-
-        /* --- DOM Elements --- */
-        const screens = { setup: document.getElementById('setup-screen'), game: document.getElementById('game-screen') };
-        const ui = {
-            grid: document.getElementById('grid'),
-            gridContainer: document.getElementById('grid-container'),
-            turnText: document.getElementById('turn-text'),
-            playerIndicator: document.getElementById('player-indicator'),
-            mineCount: document.getElementById('mine-count'),
-            gameOverModal: document.getElementById('game-over-modal'),
-            gameOverTitle: document.getElementById('game-over-title'),
-            gameOverMsg: document.getElementById('game-over-msg'),
-            gameOverIcon: document.getElementById('game-over-icon'),
-            rematchStatus: document.getElementById('rematch-status'),
-            modeBadge: document.getElementById('mode-badge'),
-            raceScore: document.getElementById('race-score'),
-            myProgress: document.getElementById('my-progress'),
-            oppProgress: document.getElementById('opp-progress'),
-            modeDesc: document.getElementById('mode-desc'),
-            mapSizeSelect: document.getElementById('map-size')
-        };
-
-        /* --- Setup & Lobby Logic --- */
-
-        function selectMode(mode) {
-            config.mode = mode;
-            // UI Updates
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.classList.remove('active-mode', 'bg-blue-600', 'text-white', 'border-blue-400');
-                btn.classList.add('bg-gray-700', 'text-gray-300', 'border-transparent');
-            });
-            const activeBtn = document.getElementById(`mode-${mode}`);
-            activeBtn.classList.remove('bg-gray-700', 'text-gray-300', 'border-transparent');
-            activeBtn.classList.add('bg-blue-600', 'text-white', 'border-blue-400');
-
-            // Description
-            const descs = {
-                turn: "Classic Hot Potato. Take turns clicking. One mistake kills you.",
-                coop: "Work Together. Same board. Real-time. If anyone hits a mine, you both lose.",
-                race: "Speedrun. Separate boards, same layout. First to clear all safe tiles wins."
-            };
-            ui.modeDesc.innerText = descs[mode];
-        }
-
-        document.getElementById('btn-create').addEventListener('click', () => {
-            // Read Config
-            const sizeKey = ui.mapSizeSelect.value;
-            config.size = sizeKey;
-            config.rows = PRESETS[sizeKey].rows;
-            config.cols = PRESETS[sizeKey].cols;
-            config.mines = PRESETS[sizeKey].mines;
-
-            initPeer();
-            isHost = true;
-
-            // UI Switch
-            document.getElementById('lobby-actions').classList.add('hidden');
-            document.getElementById('host-controls').classList.add('hidden');
-            document.getElementById('waiting-area').classList.remove('hidden');
-            setTimeout(() => document.getElementById('room-code-display').innerText = myCode, 500);
-        });
-
-        document.getElementById('btn-join').addEventListener('click', () => {
-            const code = document.getElementById('join-code-input').value.trim().toUpperCase();
-            if (code.length < 2) return alert("Invalid Code");
-
-            joinGame(code);
-        });
-
-        function copyCode() {
-            navigator.clipboard.writeText(myCode);
-            const btn = document.getElementById('room-code-display').nextElementSibling;
-            btn.innerHTML = '<i class="fas fa-check text-emerald-400"></i>';
-            setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 1500);
-        }
-
-        /* --- Networking --- */
-        function initPeer() {
-            myCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-            peer = new Peer(APP_PREFIX + myCode);
-
-            peer.on('open', (id) => {
-                myId = id;
-                updateStatus(true, 'Lobby Ready');
-            });
-            peer.on('connection', (conn) => handleConnection(conn));
-        }
-
-        function joinGame(code) {
-            const rndId = APP_PREFIX + Math.random().toString(36).substring(2, 9);
-            peer = new Peer(rndId);
-            peer.on('open', () => {
-                const conn = peer.connect(APP_PREFIX + code);
-                handleConnection(conn);
-            });
-            peer.on('error', () => alert("Connection failed. Check code."));
-        }
-
-        function handleConnection(connection) {
-            conn = connection;
-            conn.on('open', () => {
-                updateStatus(true, 'Connected');
-                if (isHost) startGameAsHost();
-            });
-            conn.on('data', handleData);
-            conn.on('close', () => {
-                alert("Opponent Disconnected");
-                location.reload();
-            });
-        }
-
-        function send(type, payload) {
-            if (conn && conn.open) conn.send({ type, payload });
-        }
-
-        function updateStatus(online, text) {
-            document.getElementById('status-dot').className = `w-2 h-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-red-500'}`;
-            document.getElementById('status-text').innerText = text;
-        }
-
-        function handleData(data) {
-            switch (data.type) {
-                case 'INIT':
-                    initializeClientGame(data.payload);
-                    break;
-                case 'MOVE':
-                    handleRemoteMove(data.payload);
-                    break;
-                case 'FLAG':
-                    handleRemoteFlag(data.payload);
-                    break;
-                case 'MOUSE_MOVE':
-                    updateOpponentCursor(data.payload);
-                    break;
-                case 'GAME_OVER':
-                    handleGameOver(data.payload.winner, data.payload.reason);
-                    break;
-                case 'RACE_PROGRESS':
-                    ui.oppProgress.innerText = Math.floor(data.payload.pct) + '%';
-                    break;
-                case 'REMATCH_REQ':
-                    ui.rematchStatus.innerText = "Opponent wants rematch...";
-                    break;
-                case 'REMATCH_ACK':
-                    if (isHost) startGameAsHost();
-                    break;
-            }
-        }
-
-        /* --- Game Logic --- */
-
-        function startGameAsHost() {
-            // Generate Mines
-            const mineLocs = [];
-            let placed = 0;
-            const { rows, cols, mines } = config;
-
-            // Simple mine gen
-            while (placed < mines) {
-                const r = Math.floor(Math.random() * rows);
-                const c = Math.floor(Math.random() * cols);
-                if (!mineLocs.some(m => m.r === r && m.c === c)) {
-                    mineLocs.push({ r, c });
-                    placed++;
-                }
-            }
-
-            const payload = { config, mineLocs };
-            send('INIT', payload);
-            initializeClientGame(payload);
-        }
-
-        function initializeClientGame(payload) {
-            // Apply Config
-            config = payload.config;
-            minesRemaining = config.mines;
-            totalSafe = (config.rows * config.cols) - config.mines;
-            clearedCount = 0;
-            gameActive = true;
-            ui.gameOverModal.classList.add('hidden');
-            ui.rematchStatus.innerText = "";
-
-            // Setup UI based on mode
-            ui.modeBadge.classList.remove('hidden');
-            ui.modeBadge.innerText = config.mode === 'race' ? '1V1 RACE' : config.mode.toUpperCase();
-
-            if (config.mode === 'race') ui.raceScore.classList.remove('hidden');
-            else ui.raceScore.classList.add('hidden');
-
-            screens.setup.classList.add('hidden');
-            screens.game.classList.remove('hidden');
-
-            // Init Board
-            board = [];
-            for (let r = 0; r < config.rows; r++) {
-                let row = [];
-                for (let c = 0; c < config.cols; c++) {
-                    row.push({
-                        isMine: payload.mineLocs.some(m => m.r === r && m.c === c),
-                        isOpen: false,
-                        isFlagged: false,
-                        count: 0
-                    });
-                }
-                board.push(row);
-            }
-
-            // Calc neighbors
-            for (let r = 0; r < config.rows; r++) {
-                for (let c = 0; c < config.cols; c++) {
-                    if (!board[r][c].isMine) {
-                        board[r][c].count = countMines(r, c);
-                    }
-                }
-            }
-
-            // Turn Logic
-            if (config.mode === 'turn') {
-                myTurn = isHost; // Host goes first
-            } else {
-                myTurn = true; // Everyone can play always in coop/race
-            }
-
-            renderGrid();
-            updateHeaderUI();
-        }
-
-        function countMines(r, c) {
-            let count = 0;
-            for (let i = -1; i <= 1; i++) {
-                for (let j = -1; j <= 1; j++) {
-                    let nr = r + i, nc = c + j;
-                    if (nr >= 0 && nr < config.rows && nc >= 0 && nc < config.cols && board[nr][nc].isMine) count++;
-                }
-            }
-            return count;
-        }
-
-        /* --- Input Handling --- */
-
-        function handleLocalClick(r, c) {
-            if (!gameActive) return;
-            if (!myTurn && config.mode === 'turn') return;
-            if (board[r][c].isOpen || board[r][c].isFlagged) return;
-
-            // Logic diverges based on mode
-            if (config.mode === 'race') {
-                // Local only, send progress
-                processMove(r, c);
-                updateRaceProgress();
-            } else {
-                // Synced modes (Turn, Coop)
-                processMove(r, c);
-                send('MOVE', { r, c });
-            }
-        }
-
-        function handleLocalFlag(r, c) {
-            if (!gameActive || board[r][c].isOpen) return;
-
-            board[r][c].isFlagged = !board[r][c].isFlagged;
-            updateTile(r, c);
-
-            if (config.mode !== 'race') {
-                send('FLAG', { r, c });
-            }
-        }
-
-        function processMove(r, c) {
-            // Hit Mine?
-            if (board[r][c].isMine) {
-                handleMineHit(true); // true = I hit it
-                return;
-            }
-
-            // Open Tile
-            openTileRecursively(r, c);
-            updateHeaderUI();
-
-            // Check Win
-            if (clearedCount === totalSafe) {
-                handleWin();
-            } else if (config.mode === 'turn') {
-                // Pass turn
-                myTurn = false;
-                updateHeaderUI();
-            }
-        }
-
-        function openTileRecursively(r, c) {
-            if (r < 0 || r >= config.rows || c < 0 || c >= config.cols || board[r][c].isOpen || board[r][c].isFlagged) return;
-
-            board[r][c].isOpen = true;
-            clearedCount++;
-            updateTile(r, c);
-
-            if (board[r][c].count === 0) {
-                for (let i = -1; i <= 1; i++) {
-                    for (let j = -1; j <= 1; j++) {
-                        openTileRecursively(r + i, c + j);
-                    }
-                }
-            }
-        }
-
-        /* --- Remote Handling --- */
-
-        function handleRemoteMove(data) {
-            const { r, c } = data;
-
-            if (config.mode === 'coop' || config.mode === 'turn') {
-                if (board[r][c].isMine) {
-                    handleGameOver('them', 'Opponent blew up! (Co-op Failure)'); // In co-op/turn shared board, if they blow up, we lose too usually?
-                    // Actually, let's clarify:
-                    // Turn-based: They blow up -> I win.
-                    // Co-op: They blow up -> We lose.
-                    if (config.mode === 'turn') handleGameOver('me', 'Opponent hit a mine!');
-                    if (config.mode === 'coop') handleGameOver('them', 'Team wiped out!');
-                } else {
-                    openTileRecursively(r, c);
-                    if (config.mode === 'turn') {
-                        myTurn = true;
-                        updateHeaderUI();
-                    }
-                }
-            }
-        }
-
-        function handleRemoteFlag(data) {
-            const { r, c } = data;
-            board[r][c].isFlagged = !board[r][c].isFlagged;
-            updateTile(r, c);
-        }
-
-        function handleMineHit(isMe) {
-            if (config.mode === 'race') {
-                // In race, if I hit a mine, I lose immediately, they win
-                send('GAME_OVER', { winner: 'them', reason: 'Opponent detonated!' });
-                handleGameOver('them', 'You exploded!');
-            }
-            else if (config.mode === 'coop') {
-                // Team death
-                send('GAME_OVER', { winner: 'none', reason: 'Team Wiped Out' });
-                handleGameOver('none', 'You exploded! Team Lost.');
-            }
-            else {
-                // Turn based: I lose, they win
-                send('GAME_OVER', { winner: 'them', reason: 'Opponent detonated!' });
-                handleGameOver('them', 'You exploded!');
-            }
-        }
-
-        function handleWin() {
-            send('GAME_OVER', { winner: 'them', reason: 'Opponent Cleared the Board!' });
-            handleGameOver('me', 'Level Cleared!');
-        }
-
-        function handleGameOver(winner, reason) {
-            gameActive = false;
-            ui.gameOverModal.classList.remove('hidden');
-
-            // Reveal Board
-            revealMines();
-
-            if (winner === 'me') {
-                ui.gameOverTitle.innerText = "VICTORY";
-                ui.gameOverTitle.className = "text-4xl font-bold text-emerald-400 mb-2";
-                ui.gameOverIcon.innerHTML = '<i class="fas fa-trophy text-emerald-400"></i>';
-            } else if (winner === 'none') {
-                ui.gameOverTitle.innerText = "DEFEAT";
-                ui.gameOverTitle.className = "text-4xl font-bold text-red-500 mb-2";
-                ui.gameOverIcon.innerHTML = '<i class="fas fa-bomb text-red-500"></i>';
-            } else {
-                ui.gameOverTitle.innerText = "DEFEAT";
-                ui.gameOverTitle.className = "text-4xl font-bold text-red-500 mb-2";
-                ui.gameOverIcon.innerHTML = '<i class="fas fa-skull-crossbones text-red-500"></i>';
-            }
-            ui.gameOverMsg.innerText = reason;
-        }
-
-        /* --- Mouse Sync --- */
-        function throttle(func, limit) {
-            let inThrottle;
-            return function () {
-                const args = arguments;
-                const context = this;
-                if (!inThrottle) {
-                    func.apply(context, args);
-                    inThrottle = true;
-                    setTimeout(() => inThrottle = false, limit);
-                }
-            }
-        }
-
-        const sendMousePos = throttle((r, c) => {
-            if (gameActive && (config.mode === 'coop' || config.mode === 'turn')) {
-                send('MOUSE_MOVE', { r, c });
-            }
-        }, 100);
-
-        function updateOpponentCursor(pos) {
-            // Remove old
-            const old = document.querySelector('.opponent-cursor');
-            if (old) old.remove();
-
-            if (pos.r === -1) return; // off grid
-
-            // Find new tile
-            const idx = pos.r * config.cols + pos.c;
-            const tile = ui.grid.children[idx];
-            if (tile) {
-                const cursor = document.createElement('div');
-                cursor.className = 'opponent-cursor animate-pulse';
-                tile.appendChild(cursor);
-            }
-        }
-
-        /* --- Rendering & UI --- */
-        function renderGrid() {
-            ui.grid.style.gridTemplateColumns = `repeat(${config.cols}, minmax(0, 1fr))`;
-            ui.grid.innerHTML = '';
-
-            // Responsive sizing
-            const isMobile = window.innerWidth < 640;
-            const maxH = window.innerHeight - (isMobile ? 180 : 220);
-            const maxW = window.innerWidth - (isMobile ? 16 : 40);
-            const sizeByH = Math.floor(maxH / config.rows);
-            const sizeByW = Math.floor(maxW / config.cols);
-            const tileSize = Math.min(sizeByH, sizeByW, isMobile ? 30 : 40);
-
-            for (let r = 0; r < config.rows; r++) {
-                for (let c = 0; c < config.cols; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = `tile w-full h-full flex justify-center items-center font-bold text-sm sm:text-base cursor-pointer rounded-sm tile-closed`;
-                    cell.style.width = `${tileSize}px`;
-                    cell.style.height = `${tileSize}px`;
-
-                    // Events
-                    cell.onclick = () => handleLocalClick(r, c);
-                    cell.oncontextmenu = (e) => { e.preventDefault(); handleLocalFlag(r, c); };
-
-                    // Mobile Long Press
-                    let timer;
-                    cell.ontouchstart = () => { timer = setTimeout(() => handleLocalFlag(r, c), 400); };
-                    cell.ontouchend = () => clearTimeout(timer);
-
-                    // Hover Sync
-                    cell.onmouseenter = () => sendMousePos(r, c);
-
-                    ui.grid.appendChild(cell);
-                }
-            }
-            ui.grid.onmouseleave = () => sendMousePos(-1, -1);
-        }
-
-        function updateTile(r, c) {
-            const idx = r * config.cols + c;
-            const cell = ui.grid.children[idx];
-            const d = board[r][c];
-
-            // Class Reset
-            cell.className = cell.className.replace('tile-closed', '').replace('tile-open', '');
-            cell.classList.add(d.isOpen ? 'tile-open' : 'tile-closed');
-
-            cell.innerHTML = '';
-
-            // Append Cursor if exists (don't destroy it)
-            // Actually re-rendering innerHTML kills the cursor. 
-            // Better approach: check for cursor element and re-add it.
-            const hasCursor = cell.querySelector('.opponent-cursor');
-
-            if (d.isOpen) {
-                if (d.isMine) {
-                    cell.innerHTML = '<i class="fas fa-bomb text-red-500 animate-bounce"></i>';
-                    cell.classList.add('bg-red-900/50');
-                } else if (d.count > 0) {
-                    cell.innerText = d.count;
-                    cell.classList.add(`num-${d.count}`);
-                }
-            } else if (d.isFlagged) {
-                cell.innerHTML = '<i class="fas fa-flag text-red-400 text-xs"></i>';
-            }
-
-            if (hasCursor) cell.appendChild(hasCursor);
-        }
-
-        function updateHeaderUI() {
-            // Turn Indicator
-            if (config.mode === 'turn') {
-                if (myTurn) {
-                    ui.playerIndicator.className = "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/50 transform scale-105 transition-all";
-                    ui.turnText.innerText = "YOUR TURN";
-                    ui.gridContainer.classList.add('turn-active-border');
-                    ui.gridContainer.classList.add('my-turn-bg');
-                } else {
-                    ui.playerIndicator.className = "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-700 text-gray-400 border border-gray-600 opacity-80";
-                    ui.turnText.innerText = "THEIR TURN";
-                    ui.gridContainer.classList.remove('turn-active-border');
-                    ui.gridContainer.classList.remove('my-turn-bg');
-                }
-            } else {
-                // Static for Coop/Race
-                ui.playerIndicator.className = "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-600 text-white border border-emerald-500";
-                ui.turnText.innerText = "ACTIVE";
-                ui.gridContainer.classList.remove('turn-active-border');
-                ui.gridContainer.classList.remove('my-turn-bg');
-            }
-
-            ui.mineCount.innerText = minesRemaining - countFlags();
-        }
-
-        function countFlags() {
-            let f = 0;
-            board.forEach(row => row.forEach(cell => { if (cell.isFlagged) f++; }));
-            return f;
-        }
-
-        function updateRaceProgress() {
-            const pct = (clearedCount / totalSafe) * 100;
-            ui.myProgress.innerText = Math.floor(pct) + '%';
-            send('RACE_PROGRESS', { pct });
-        }
-
-        function revealMines() {
-            for (let r = 0; r < config.rows; r++) {
-                for (let c = 0; c < config.cols; c++) {
-                    if (board[r][c].isMine) {
-                        board[r][c].isOpen = true;
-                        updateTile(r, c);
-                    }
-                }
-            }
-        }
-
-        function requestRematch() {
-            ui.rematchStatus.innerText = "Waiting for opponent...";
-            send('REMATCH_REQ', {});
-        }
-
+        App.init();
     </script>
 </body>
 
-</html
+</html>
