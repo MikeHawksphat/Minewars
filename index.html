@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Turn-Based Minesweeper</title>
+    <title>MineWars: Multiplayer Minesweeper</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -25,10 +25,11 @@
 
         /* Tile Styles */
         .tile {
-            transition: all 0.2s ease;
+            transition: background-color 0.2s, transform 0.1s;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
+            position: relative;
         }
 
         .tile-closed {
@@ -53,46 +54,88 @@
             color: #60a5fa;
         }
 
-        /* blue-400 */
         .num-2 {
             color: #34d399;
         }
 
-        /* emerald-400 */
         .num-3 {
             color: #f87171;
         }
 
-        /* red-400 */
         .num-4 {
             color: #818cf8;
         }
 
-        /* indigo-400 */
         .num-5 {
             color: #fbbf24;
         }
 
-        /* amber-400 */
         .num-6 {
             color: #2dd4bf;
         }
 
-        /* teal-400 */
         .num-7 {
             color: #e879f9;
         }
 
-        /* fuchsia-400 */
         .num-8 {
             color: #9ca3af;
         }
 
-        /* gray-400 */
-
-        .turn-active {
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        /* Turn Indicators */
+        .turn-active-border {
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.4);
             border-color: #3b82f6;
+        }
+
+        @keyframes pulse-bg {
+            0% {
+                background-color: rgba(59, 130, 246, 0);
+            }
+
+            50% {
+                background-color: rgba(59, 130, 246, 0.1);
+            }
+
+            100% {
+                background-color: rgba(59, 130, 246, 0);
+            }
+        }
+
+        .my-turn-bg {
+            animation: pulse-bg 2s infinite;
+        }
+
+        /* Opponent Cursor */
+        .opponent-cursor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border: 2px solid #ef4444;
+            /* Red border */
+            background-color: rgba(239, 68, 68, 0.2);
+            z-index: 10;
+            border-radius: 2px;
+            transition: all 0.1s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .opponent-cursor::after {
+            content: '\f245';
+            /* FontAwesome Mouse Pointer */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: #ef4444;
+            font-size: 12px;
+            position: absolute;
+            bottom: -10px;
+            right: -10px;
+            text-shadow: 0 1px 2px black;
         }
 
         /* Loader */
@@ -120,67 +163,115 @@
 <body class="bg-gray-900 text-white h-screen flex flex-col overflow-hidden font-sans">
 
     <!-- Header -->
-    <header class="p-4 bg-gray-800 border-b border-gray-700 flex justify-between items-center shadow-lg z-10">
+    <header class="p-3 bg-gray-800 border-b border-gray-700 flex justify-between items-center shadow-lg z-20">
         <div class="flex items-center gap-2">
             <i class="fas fa-bomb text-red-500 text-xl"></i>
-            <h1 class="text-xl font-bold tracking-wider">MINE<span class="text-blue-400">WARS</span></h1>
+            <h1 class="text-xl font-bold tracking-wider hidden sm:block">MINE<span class="text-blue-400">WARS</span>
+            </h1>
         </div>
-        <div id="connection-status"
-            class="text-xs font-mono px-2 py-1 rounded bg-gray-700 text-gray-400 flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-red-500" id="status-dot"></div>
-            <span id="status-text">Offline</span>
+
+        <div class="flex items-center gap-4">
+            <div id="mode-badge"
+                class="hidden px-2 py-0.5 rounded text-xs font-bold bg-blue-900 text-blue-200 border border-blue-700 uppercase tracking-wide">
+                MODE
+            </div>
+            <div id="connection-status"
+                class="text-xs font-mono px-2 py-1 rounded bg-gray-700 text-gray-400 flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-red-500" id="status-dot"></div>
+                <span id="status-text">Offline</span>
+            </div>
         </div>
     </header>
 
     <!-- Main Content Area -->
-    <main class="flex-1 relative flex justify-center items-center p-4">
+    <main class="flex-1 relative flex justify-center items-center p-2 sm:p-4 bg-gray-900">
 
         <!-- Setup Screen (Lobby) -->
         <div id="setup-screen"
-            class="w-full max-w-md bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700 transform transition-all">
-            <div class="text-center mb-8">
-                <h2 class="text-2xl font-bold mb-2">Start a Game</h2>
-                <p class="text-gray-400 text-sm">Turn-based survival. Don't blow up.</p>
+            class="w-full max-w-md bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl border border-gray-700 transform transition-all">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold mb-1">MineWars Lobby</h2>
+                <p class="text-gray-400 text-sm">Select options to start.</p>
             </div>
 
-            <!-- Create Game Section -->
-            <div class="bg-gray-700/50 p-6 rounded-xl mb-6 border border-gray-600">
-                <h3 class="text-sm uppercase tracking-wider text-gray-400 font-bold mb-4">Create Room</h3>
-                <div id="create-area">
-                    <button id="btn-create"
-                        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2">
-                        <i class="fas fa-plus-circle"></i> Create New Game
-                    </button>
-                </div>
-                <div id="waiting-area" class="hidden text-center">
-                    <p class="text-gray-400 text-sm mb-2">Share this code with a friend:</p>
-                    <div class="flex items-center justify-center gap-2 mb-4">
-                        <div id="room-code-display"
-                            class="text-4xl font-mono font-bold text-white tracking-widest bg-gray-900 px-4 py-2 rounded border border-blue-500/50">
-                            ...</div>
-                        <button onclick="copyCode()" class="p-3 bg-gray-700 hover:bg-gray-600 rounded text-gray-300"
-                            title="Copy">
-                            <i class="fas fa-copy"></i>
+            <!-- Host Options -->
+            <div id="host-controls" class="mb-6 space-y-4">
+                <!-- Game Mode Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Game Mode</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="selectMode('turn')" id="mode-turn"
+                            class="mode-btn active-mode bg-blue-600 p-2 rounded text-xs sm:text-sm font-bold text-white border-2 border-blue-400 shadow-lg">
+                            Turn Based
+                        </button>
+                        <button onclick="selectMode('coop')" id="mode-coop"
+                            class="mode-btn bg-gray-700 p-2 rounded text-xs sm:text-sm font-bold text-gray-300 border-2 border-transparent hover:bg-gray-600">
+                            Co-op
+                        </button>
+                        <button onclick="selectMode('race')" id="mode-race"
+                            class="mode-btn bg-gray-700 p-2 rounded text-xs sm:text-sm font-bold text-gray-300 border-2 border-transparent hover:bg-gray-600">
+                            1v1 Race
                         </button>
                     </div>
-                    <div class="flex items-center justify-center gap-2 text-blue-400 text-sm animate-pulse">
-                        <div class="loader border-t-blue-400"></div>
-                        Waiting for opponent...
-                    </div>
+                    <p id="mode-desc" class="text-xs text-gray-400 mt-2 italic">Take turns. One mistake loses the game.
+                    </p>
+                </div>
+
+                <!-- Map Size Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Map Size</label>
+                    <select id="map-size"
+                        class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+                        <option value="small">Small (10x10, 15 Mines)</option>
+                        <option value="medium" selected>Medium (16x16, 40 Mines)</option>
+                        <option value="large">Large (20x20, 70 Mines)</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Join Game Section -->
-            <div class="bg-gray-700/50 p-6 rounded-xl border border-gray-600">
-                <h3 class="text-sm uppercase tracking-wider text-gray-400 font-bold mb-4">Join Room</h3>
+            <!-- Create/Join Buttons -->
+            <div id="lobby-actions" class="space-y-4">
+                <div id="create-area">
+                    <button id="btn-create"
+                        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2 shadow-lg">
+                        <i class="fas fa-plus-circle"></i> Create Room
+                    </button>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-gray-600"></div>
+                    <span class="flex-shrink mx-4 text-gray-500 text-xs uppercase">Or Join</span>
+                    <div class="flex-grow border-t border-gray-600"></div>
+                </div>
+
                 <div class="flex gap-2">
-                    <input type="text" id="join-code-input" placeholder="Enter Code"
+                    <input type="text" id="join-code-input" placeholder="CODE"
                         class="w-full bg-gray-900 border border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-blue-500 font-mono uppercase tracking-widest text-center">
                     <button id="btn-join"
-                        class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 rounded-lg transition whitespace-nowrap">
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 rounded-lg transition whitespace-nowrap shadow-lg">
                         Join
                     </button>
                 </div>
+            </div>
+
+            <!-- Waiting Room (Hidden initially) -->
+            <div id="waiting-area" class="hidden text-center pt-4">
+                <p class="text-gray-400 text-sm mb-2">Room Ready. Waiting for player...</p>
+                <div class="flex items-center justify-center gap-2 mb-6">
+                    <div id="room-code-display"
+                        class="text-4xl font-mono font-bold text-white tracking-widest bg-gray-900 px-6 py-3 rounded-lg border border-blue-500/50 shadow-inner">
+                        ...</div>
+                    <button onclick="copyCode()"
+                        class="p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition" title="Copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div class="flex items-center justify-center gap-2 text-blue-400 text-sm animate-pulse">
+                    <div class="loader border-t-blue-400"></div>
+                    <span>Syncing...</span>
+                </div>
+                <button onclick="location.reload()"
+                    class="mt-6 text-xs text-red-400 hover:text-red-300 underline">Cancel</button>
             </div>
         </div>
 
@@ -189,36 +280,45 @@
 
             <!-- Game Info Bar -->
             <div
-                class="flex justify-between items-center mb-4 bg-gray-800 p-3 rounded-lg shadow-md border border-gray-700">
-                <div class="flex items-center gap-4">
+                class="flex justify-between items-center mb-2 sm:mb-4 bg-gray-800 p-2 sm:p-3 rounded-lg shadow-md border border-gray-700">
+                <div class="flex-1">
                     <div id="player-indicator"
-                        class="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-700 border border-gray-600 transition-all duration-300">
-                        <i class="fas fa-user"></i> <span id="turn-text" class="font-bold">Initializing...</span>
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700 border border-gray-600 transition-all duration-300">
+                        <i class="fas fa-user text-sm"></i>
+                        <span id="turn-text" class="font-bold text-sm sm:text-base">Initializing...</span>
                     </div>
                 </div>
-                <div class="text-gray-400 text-sm font-mono">
+
+                <!-- For Race Mode Score -->
+                <div id="race-score" class="hidden flex-1 text-center text-xs sm:text-sm font-mono text-gray-300">
+                    <span class="text-blue-400">YOU: <span id="my-progress">0%</span></span>
+                    <span class="mx-2">|</span>
+                    <span class="text-red-400">THEM: <span id="opp-progress">0%</span></span>
+                </div>
+
+                <div class="flex-1 text-right text-gray-400 text-xs sm:text-sm font-mono">
                     Mines: <span id="mine-count" class="text-red-400 font-bold">0</span>
                 </div>
             </div>
 
             <!-- Game Grid Container -->
-            <div
-                class="flex-1 flex justify-center items-center overflow-auto bg-gray-900/50 rounded-lg border border-gray-700 p-2 relative">
-                <div id="grid" class="grid gap-1 select-none mx-auto">
+            <div id="grid-container"
+                class="flex-1 flex justify-center items-center overflow-auto bg-gray-900/50 rounded-lg border border-gray-700 p-2 relative transition-all duration-500">
+                <div id="grid" class="grid gap-0.5 sm:gap-1 select-none mx-auto shadow-2xl">
                     <!-- Grid items generated by JS -->
                 </div>
 
                 <!-- Game Over Overlay -->
                 <div id="game-over-modal"
-                    class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-20 rounded-lg">
+                    class="hidden absolute inset-0 bg-black/85 backdrop-blur-sm flex justify-center items-center z-30 rounded-lg">
                     <div
-                        class="text-center p-8 bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl transform scale-100 animate-[fadeIn_0.3s_ease-out]">
+                        class="text-center p-8 bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl w-11/12 max-w-sm transform transition-all animate-[fadeIn_0.3s_ease-out]">
                         <div id="game-over-icon" class="text-6xl mb-4"></div>
                         <h2 id="game-over-title" class="text-3xl font-bold text-white mb-2">Game Over</h2>
                         <p id="game-over-msg" class="text-gray-300 mb-6">Result text here</p>
-                        <button onclick="requestRematch()"
-                            class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-full transition shadow-lg shadow-blue-500/20">
-                            <i class="fas fa-redo mr-2"></i> Rematch
+                        <button onclick="requestRematch()" id="rematch-btn"
+                            class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full transition shadow-lg shadow-blue-500/20 flex items-center justify-center mx-auto gap-2">
+                            <i class="fas fa-redo"></i> Rematch
                         </button>
                         <div id="rematch-status" class="mt-4 text-sm text-gray-400 min-h-[20px]"></div>
                     </div>
@@ -229,11 +329,21 @@
     </main>
 
     <script>
-        /* --- Configuration & State --- */
-        const APP_PREFIX = 'tbs-mines-v1-'; // Unique prefix for PeerJS to avoid collisions with other apps
-        const ROWS = 16;
-        const COLS = 16;
-        const MINES = 40;
+        /* --- Configuration --- */
+        const APP_PREFIX = 'tbs-mines-v2-';
+
+        const PRESETS = {
+            small: { rows: 10, cols: 10, mines: 15 },
+            medium: { rows: 16, cols: 16, mines: 40 },
+            large: { rows: 20, cols: 20, mines: 70 }
+        };
+
+        // State
+        let config = {
+            mode: 'turn', // 'turn', 'coop', 'race'
+            size: 'medium',
+            rows: 16, cols: 16, mines: 40
+        };
 
         let peer = null;
         let conn = null;
@@ -241,25 +351,22 @@
         let myCode = null;
         let isHost = false;
         let gameActive = false;
+
+        let board = []; // My local board state
         let myTurn = false;
-        let board = []; // Local board state
-        let minesRemaining = MINES;
+        let minesRemaining = 0;
+        let clearedCount = 0;
+        let totalSafe = 0;
+
+        // Sync State
+        let lastHoveredTile = { r: -1, c: -1 };
+        let opponentHoveredTile = { r: -1, c: -1 };
 
         /* --- DOM Elements --- */
-        const screens = {
-            setup: document.getElementById('setup-screen'),
-            game: document.getElementById('game-screen')
-        };
+        const screens = { setup: document.getElementById('setup-screen'), game: document.getElementById('game-screen') };
         const ui = {
-            createBtn: document.getElementById('btn-create'),
-            joinBtn: document.getElementById('btn-join'),
-            joinInput: document.getElementById('join-code-input'),
-            createArea: document.getElementById('create-area'),
-            waitingArea: document.getElementById('waiting-area'),
-            codeDisplay: document.getElementById('room-code-display'),
-            statusDot: document.getElementById('status-dot'),
-            statusText: document.getElementById('status-text'),
             grid: document.getElementById('grid'),
+            gridContainer: document.getElementById('grid-container'),
             turnText: document.getElementById('turn-text'),
             playerIndicator: document.getElementById('player-indicator'),
             mineCount: document.getElementById('mine-count'),
@@ -267,404 +374,520 @@
             gameOverTitle: document.getElementById('game-over-title'),
             gameOverMsg: document.getElementById('game-over-msg'),
             gameOverIcon: document.getElementById('game-over-icon'),
-            rematchStatus: document.getElementById('rematch-status')
+            rematchStatus: document.getElementById('rematch-status'),
+            modeBadge: document.getElementById('mode-badge'),
+            raceScore: document.getElementById('race-score'),
+            myProgress: document.getElementById('my-progress'),
+            oppProgress: document.getElementById('opp-progress'),
+            modeDesc: document.getElementById('mode-desc'),
+            mapSizeSelect: document.getElementById('map-size')
         };
 
-        /* --- Initialization --- */
-        function initPeer(customCode = null) {
-            // Generate a random 5-char code if one isn't provided
-            myCode = customCode || Math.random().toString(36).substring(2, 7).toUpperCase();
-            const fullId = APP_PREFIX + myCode;
+        /* --- Setup & Lobby Logic --- */
 
-            peer = new Peer(fullId, {
-                debug: 1
+        function selectMode(mode) {
+            config.mode = mode;
+            // UI Updates
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active-mode', 'bg-blue-600', 'text-white', 'border-blue-400');
+                btn.classList.add('bg-gray-700', 'text-gray-300', 'border-transparent');
             });
+            const activeBtn = document.getElementById(`mode-${mode}`);
+            activeBtn.classList.remove('bg-gray-700', 'text-gray-300', 'border-transparent');
+            activeBtn.classList.add('bg-blue-600', 'text-white', 'border-blue-400');
 
-            peer.on('open', (id) => {
-                myId = id;
-                updateConnectionStatus(true, 'Ready');
-                console.log('My Peer ID:', id);
-            });
-
-            peer.on('connection', (connection) => {
-                if (conn) {
-                    connection.close(); // Only allow one opponent
-                    return;
-                }
-                handleConnection(connection);
-            });
-
-            peer.on('error', (err) => {
-                console.error(err);
-                // If ID is taken (rare with random string), try again
-                if (err.type === 'unavailable-id') {
-                    initPeer();
-                } else {
-                    alert("Connection Error: " + err.type);
-                }
-            });
+            // Description
+            const descs = {
+                turn: "Classic Hot Potato. Take turns clicking. One mistake kills you.",
+                coop: "Work Together. Same board. Real-time. If anyone hits a mine, you both lose.",
+                race: "Speedrun. Separate boards, same layout. First to clear all safe tiles wins."
+            };
+            ui.modeDesc.innerText = descs[mode];
         }
 
-        function updateConnectionStatus(online, text) {
-            ui.statusDot.className = `w-2 h-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-red-500'}`;
-            ui.statusText.innerText = text;
-        }
+        document.getElementById('btn-create').addEventListener('click', () => {
+            // Read Config
+            const sizeKey = ui.mapSizeSelect.value;
+            config.size = sizeKey;
+            config.rows = PRESETS[sizeKey].rows;
+            config.cols = PRESETS[sizeKey].cols;
+            config.mines = PRESETS[sizeKey].mines;
 
-        /* --- UI Logic --- */
-        ui.createBtn.addEventListener('click', () => {
-            initPeer(); // Initialize with random code
-            ui.createArea.classList.add('hidden');
-            ui.waitingArea.classList.remove('hidden');
-            // Wait for 'open' event to show code, but we know it shortly
-            setTimeout(() => {
-                ui.codeDisplay.innerText = myCode;
-            }, 500);
+            initPeer();
             isHost = true;
+
+            // UI Switch
+            document.getElementById('lobby-actions').classList.add('hidden');
+            document.getElementById('host-controls').classList.add('hidden');
+            document.getElementById('waiting-area').classList.remove('hidden');
+            setTimeout(() => document.getElementById('room-code-display').innerText = myCode, 500);
+        });
+
+        document.getElementById('btn-join').addEventListener('click', () => {
+            const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+            if (code.length < 2) return alert("Invalid Code");
+
+            joinGame(code);
         });
 
         function copyCode() {
             navigator.clipboard.writeText(myCode);
-            const btn = ui.codeDisplay.nextElementSibling;
-            const icon = btn.querySelector('i');
-            icon.className = 'fas fa-check text-emerald-400';
-            setTimeout(() => icon.className = 'fas fa-copy', 1000);
+            const btn = document.getElementById('room-code-display').nextElementSibling;
+            btn.innerHTML = '<i class="fas fa-check text-emerald-400"></i>';
+            setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 1500);
         }
 
-        ui.joinBtn.addEventListener('click', () => {
-            const code = ui.joinInput.value.trim().toUpperCase();
-            if (!code || code.length < 2) return alert("Please enter a valid code");
-
-            // Initialize peer with a random ID for ourselves (we don't need a specific code)
-            const myRandomId = APP_PREFIX + Math.random().toString(36).substring(2, 9);
-            peer = new Peer(myRandomId);
-
-            peer.on('open', () => {
-                const targetId = APP_PREFIX + code;
-                const connection = peer.connect(targetId);
-                isHost = false;
-                handleConnection(connection);
-            });
-
-            peer.on('error', (err) => {
-                alert("Could not connect. Check the code and try again.");
-            });
-        });
-
         /* --- Networking --- */
+        function initPeer() {
+            myCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+            peer = new Peer(APP_PREFIX + myCode);
+
+            peer.on('open', (id) => {
+                myId = id;
+                updateStatus(true, 'Lobby Ready');
+            });
+            peer.on('connection', (conn) => handleConnection(conn));
+        }
+
+        function joinGame(code) {
+            const rndId = APP_PREFIX + Math.random().toString(36).substring(2, 9);
+            peer = new Peer(rndId);
+            peer.on('open', () => {
+                const conn = peer.connect(APP_PREFIX + code);
+                handleConnection(conn);
+            });
+            peer.on('error', () => alert("Connection failed. Check code."));
+        }
+
         function handleConnection(connection) {
             conn = connection;
-
             conn.on('open', () => {
-                updateConnectionStatus(true, 'Connected');
-                screens.setup.classList.add('hidden');
-                screens.game.classList.remove('hidden');
-
-                if (isHost) {
-                    setupGame();
-                }
+                updateStatus(true, 'Connected');
+                if (isHost) startGameAsHost();
             });
-
-            conn.on('data', (data) => {
-                handleData(data);
-            });
-
+            conn.on('data', handleData);
             conn.on('close', () => {
-                alert("Opponent disconnected.");
+                alert("Opponent Disconnected");
                 location.reload();
             });
         }
 
         function send(type, payload) {
-            if (conn && conn.open) {
-                conn.send({ type, payload });
-            }
+            if (conn && conn.open) conn.send({ type, payload });
+        }
+
+        function updateStatus(online, text) {
+            document.getElementById('status-dot').className = `w-2 h-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-red-500'}`;
+            document.getElementById('status-text').innerText = text;
         }
 
         function handleData(data) {
             switch (data.type) {
-                case 'INIT_GAME':
-                    board = data.payload.board;
-                    myTurn = false; // Host always goes first
-                    minesRemaining = data.payload.mines;
-                    gameActive = true;
-                    renderGrid();
-                    updateTurnUI();
+                case 'INIT':
+                    initializeClientGame(data.payload);
                     break;
                 case 'MOVE':
-                    handleRemoteMove(data.payload.r, data.payload.c);
+                    handleRemoteMove(data.payload);
+                    break;
+                case 'FLAG':
+                    handleRemoteFlag(data.payload);
+                    break;
+                case 'MOUSE_MOVE':
+                    updateOpponentCursor(data.payload);
                     break;
                 case 'GAME_OVER':
                     handleGameOver(data.payload.winner, data.payload.reason);
                     break;
+                case 'RACE_PROGRESS':
+                    ui.oppProgress.innerText = Math.floor(data.payload.pct) + '%';
+                    break;
                 case 'REMATCH_REQ':
-                    ui.rematchStatus.innerText = "Opponent wants a rematch...";
+                    ui.rematchStatus.innerText = "Opponent wants rematch...";
                     break;
                 case 'REMATCH_ACK':
-                    if (isHost) setupGame();
+                    if (isHost) startGameAsHost();
                     break;
             }
         }
 
         /* --- Game Logic --- */
-        function setupGame() {
-            // Host logic to create board
-            createBoard(ROWS, COLS, MINES);
-            myTurn = true;
-            gameActive = true;
-            minesRemaining = MINES;
 
-            // Send board to client (masking mines handled by logic, but for simplicity sending full state and trusting client not to cheat via console)
-            // Ideally, we'd only send "safe" data, but for a simple peerjs game, full state sync is easier.
-            send('INIT_GAME', { board, mines: MINES });
-
-            renderGrid();
-            updateTurnUI();
-            ui.gameOverModal.classList.add('hidden');
-            ui.rematchStatus.innerText = "";
-        }
-
-        function createBoard(rows, cols, mines) {
-            board = [];
-            // Init empty
-            for (let r = 0; r < rows; r++) {
-                let row = [];
-                for (let c = 0; c < cols; c++) {
-                    row.push({ isMine: false, isOpen: false, count: 0, isFlagged: false });
-                }
-                board.push(row);
-            }
-
-            // Place mines
+        function startGameAsHost() {
+            // Generate Mines
+            const mineLocs = [];
             let placed = 0;
+            const { rows, cols, mines } = config;
+
+            // Simple mine gen
             while (placed < mines) {
-                let r = Math.floor(Math.random() * rows);
-                let c = Math.floor(Math.random() * cols);
-                if (!board[r][c].isMine) {
-                    board[r][c].isMine = true;
+                const r = Math.floor(Math.random() * rows);
+                const c = Math.floor(Math.random() * cols);
+                if (!mineLocs.some(m => m.r === r && m.c === c)) {
+                    mineLocs.push({ r, c });
                     placed++;
                 }
             }
 
-            // Calc counts
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
+            const payload = { config, mineLocs };
+            send('INIT', payload);
+            initializeClientGame(payload);
+        }
+
+        function initializeClientGame(payload) {
+            // Apply Config
+            config = payload.config;
+            minesRemaining = config.mines;
+            totalSafe = (config.rows * config.cols) - config.mines;
+            clearedCount = 0;
+            gameActive = true;
+            ui.gameOverModal.classList.add('hidden');
+            ui.rematchStatus.innerText = "";
+
+            // Setup UI based on mode
+            ui.modeBadge.classList.remove('hidden');
+            ui.modeBadge.innerText = config.mode === 'race' ? '1V1 RACE' : config.mode.toUpperCase();
+
+            if (config.mode === 'race') ui.raceScore.classList.remove('hidden');
+            else ui.raceScore.classList.add('hidden');
+
+            screens.setup.classList.add('hidden');
+            screens.game.classList.remove('hidden');
+
+            // Init Board
+            board = [];
+            for (let r = 0; r < config.rows; r++) {
+                let row = [];
+                for (let c = 0; c < config.cols; c++) {
+                    row.push({
+                        isMine: payload.mineLocs.some(m => m.r === r && m.c === c),
+                        isOpen: false,
+                        isFlagged: false,
+                        count: 0
+                    });
+                }
+                board.push(row);
+            }
+
+            // Calc neighbors
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
                     if (!board[r][c].isMine) {
-                        let count = 0;
-                        for (let i = -1; i <= 1; i++) {
-                            for (let j = -1; j <= 1; j++) {
-                                let nr = r + i, nc = c + j;
-                                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].isMine) count++;
-                            }
-                        }
-                        board[r][c].count = count;
+                        board[r][c].count = countMines(r, c);
                     }
                 }
             }
-        }
 
-        /* --- Rendering --- */
-        function renderGrid() {
-            ui.grid.style.gridTemplateColumns = `repeat(${COLS}, minmax(0, 1fr))`;
-            ui.grid.innerHTML = '';
-
-            // Calculate tile size based on viewport
-            const containerSize = Math.min(window.innerWidth - 32, window.innerHeight - 200, 600);
-            const tileSize = Math.floor(containerSize / COLS);
-
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = `tile w-8 h-8 sm:w-10 sm:h-10 flex justify-center items-center font-bold text-sm sm:text-base cursor-pointer rounded-sm ${board[r][c].isOpen ? 'tile-open' : 'tile-closed'}`;
-                    cell.dataset.r = r;
-                    cell.dataset.c = c;
-                    cell.style.width = `${tileSize}px`;
-                    cell.style.height = `${tileSize}px`;
-
-                    if (board[r][c].isOpen) {
-                        if (board[r][c].isMine) {
-                            cell.innerHTML = '<i class="fas fa-bomb text-red-500"></i>';
-                            cell.classList.add('bg-red-900/50');
-                        } else if (board[r][c].count > 0) {
-                            cell.innerText = board[r][c].count;
-                            cell.classList.add(`num-${board[r][c].count}`);
-                        }
-                    } else if (board[r][c].isFlagged) {
-                        cell.innerHTML = '<i class="fas fa-flag text-red-400 text-xs"></i>';
-                    }
-
-                    // Interactions
-                    cell.addEventListener('click', (e) => handleLocalClick(r, c));
-                    cell.addEventListener('contextmenu', (e) => {
-                        e.preventDefault();
-                        toggleFlag(r, c);
-                    });
-
-                    // Long press for mobile flagging
-                    let pressTimer;
-                    cell.addEventListener('touchstart', () => {
-                        pressTimer = setTimeout(() => toggleFlag(r, c), 500);
-                    });
-                    cell.addEventListener('touchend', () => clearTimeout(pressTimer));
-
-                    ui.grid.appendChild(cell);
-                }
-            }
-            ui.mineCount.innerText = minesRemaining;
-        }
-
-        function updateTile(r, c) {
-            // Helper to just update one tile instead of full rerender (optimization)
-            const index = r * COLS + c;
-            const cell = ui.grid.children[index];
-            const data = board[r][c];
-
-            cell.className = `tile w-full h-full flex justify-center items-center font-bold text-sm sm:text-base cursor-pointer rounded-sm ${data.isOpen ? 'tile-open' : 'tile-closed'}`;
-            // Reset inline size styles handled by CSS grid mostly, but if we did JS sizing:
-            // cell.style.width = ... (keep existing style)
-
-            cell.innerHTML = '';
-            if (data.isOpen) {
-                if (data.isMine) {
-                    cell.innerHTML = '<i class="fas fa-bomb text-red-500"></i>';
-                    cell.classList.add('bg-red-900/50');
-                } else if (data.count > 0) {
-                    cell.innerText = data.count;
-                    cell.classList.add(`num-${data.count}`);
-                }
-            } else if (data.isFlagged) {
-                cell.innerHTML = '<i class="fas fa-flag text-red-400 text-xs"></i>';
-            }
-        }
-
-        function updateTurnUI() {
-            const body = document.body;
-            if (myTurn) {
-                ui.playerIndicator.className = "flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-105 transition-all";
-                ui.turnText.innerText = "YOUR TURN";
-                ui.grid.classList.add('turn-active');
+            // Turn Logic
+            if (config.mode === 'turn') {
+                myTurn = isHost; // Host goes first
             } else {
-                ui.playerIndicator.className = "flex items-center gap-2 px-4 py-2 rounded-full bg-gray-700 text-gray-400 border border-gray-600";
-                ui.turnText.innerText = "OPPONENT'S TURN";
-                ui.grid.classList.remove('turn-active');
+                myTurn = true; // Everyone can play always in coop/race
             }
+
+            renderGrid();
+            updateHeaderUI();
         }
 
-        /* --- Gameplay Actions --- */
-        function toggleFlag(r, c) {
-            if (!gameActive || board[r][c].isOpen) return;
-            board[r][c].isFlagged = !board[r][c].isFlagged;
-            updateTile(r, c);
-            // Flagging is local only, doesn't affect game flow
+        function countMines(r, c) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    let nr = r + i, nc = c + j;
+                    if (nr >= 0 && nr < config.rows && nc >= 0 && nc < config.cols && board[nr][nc].isMine) count++;
+                }
+            }
+            return count;
         }
+
+        /* --- Input Handling --- */
 
         function handleLocalClick(r, c) {
-            if (!gameActive || !myTurn || board[r][c].isOpen || board[r][c].isFlagged) return;
+            if (!gameActive) return;
+            if (!myTurn && config.mode === 'turn') return;
+            if (board[r][c].isOpen || board[r][c].isFlagged) return;
 
-            // Reveal logic
-            openTile(r, c);
-            send('MOVE', { r, c });
-
-            // Check result
-            if (board[r][c].isMine) {
-                // I hit a mine, I lose
-                handleGameOver('opponent', 'You detonated a mine!');
-                send('GAME_OVER', { winner: 'host', reason: 'Opponent detonated a mine!' }); // Payload ID doesn't matter much here, handled by context
+            // Logic diverges based on mode
+            if (config.mode === 'race') {
+                // Local only, send progress
+                processMove(r, c);
+                updateRaceProgress();
             } else {
-                // Safe move, pass turn
-                myTurn = false;
-                updateTurnUI();
-                checkWinCondition();
+                // Synced modes (Turn, Coop)
+                processMove(r, c);
+                send('MOVE', { r, c });
             }
         }
 
-        function handleRemoteMove(r, c) {
-            openTile(r, c);
-            if (board[r][c].isMine) {
-                // Opponent hit a mine, I win
-                // The 'GAME_OVER' message usually follows, but we can deduce state here too
-                // We wait for explicit GAME_OVER packet usually, but let's handle visual update
-            } else {
-                myTurn = true;
-                updateTurnUI();
-            }
-        }
+        function handleLocalFlag(r, c) {
+            if (!gameActive || board[r][c].isOpen) return;
 
-        function openTile(r, c) {
-            if (board[r][c].isOpen) return;
-
-            board[r][c].isOpen = true;
+            board[r][c].isFlagged = !board[r][c].isFlagged;
             updateTile(r, c);
 
-            // Flood fill if 0
-            if (board[r][c].count === 0 && !board[r][c].isMine) {
+            if (config.mode !== 'race') {
+                send('FLAG', { r, c });
+            }
+        }
+
+        function processMove(r, c) {
+            // Hit Mine?
+            if (board[r][c].isMine) {
+                handleMineHit(true); // true = I hit it
+                return;
+            }
+
+            // Open Tile
+            openTileRecursively(r, c);
+            updateHeaderUI();
+
+            // Check Win
+            if (clearedCount === totalSafe) {
+                handleWin();
+            } else if (config.mode === 'turn') {
+                // Pass turn
+                myTurn = false;
+                updateHeaderUI();
+            }
+        }
+
+        function openTileRecursively(r, c) {
+            if (r < 0 || r >= config.rows || c < 0 || c >= config.cols || board[r][c].isOpen || board[r][c].isFlagged) return;
+
+            board[r][c].isOpen = true;
+            clearedCount++;
+            updateTile(r, c);
+
+            if (board[r][c].count === 0) {
                 for (let i = -1; i <= 1; i++) {
                     for (let j = -1; j <= 1; j++) {
-                        let nr = r + i, nc = c + j;
-                        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !board[nr][nc].isOpen) {
-                            openTile(nr, nc);
-                        }
+                        openTileRecursively(r + i, c + j);
                     }
                 }
             }
         }
 
-        function checkWinCondition() {
-            // Optional: Clear all non-mines to win? 
-            // For turn-based, usually just survival. 
-            // If we want to implement clearing:
-            let safeRemaining = 0;
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (!board[r][c].isMine && !board[r][c].isOpen) safeRemaining++;
+        /* --- Remote Handling --- */
+
+        function handleRemoteMove(data) {
+            const { r, c } = data;
+
+            if (config.mode === 'coop' || config.mode === 'turn') {
+                if (board[r][c].isMine) {
+                    handleGameOver('them', 'Opponent blew up! (Co-op Failure)'); // In co-op/turn shared board, if they blow up, we lose too usually?
+                    // Actually, let's clarify:
+                    // Turn-based: They blow up -> I win.
+                    // Co-op: They blow up -> We lose.
+                    if (config.mode === 'turn') handleGameOver('me', 'Opponent hit a mine!');
+                    if (config.mode === 'coop') handleGameOver('them', 'Team wiped out!');
+                } else {
+                    openTileRecursively(r, c);
+                    if (config.mode === 'turn') {
+                        myTurn = true;
+                        updateHeaderUI();
+                    }
                 }
             }
-            if (safeRemaining === 0) {
-                // Draw or Split? Or person who cleared last wins?
-                // Let's just say Draw for simplicity or handle as "All Clear"
-                // For now, keeping it simple: Deathmatch.
+        }
+
+        function handleRemoteFlag(data) {
+            const { r, c } = data;
+            board[r][c].isFlagged = !board[r][c].isFlagged;
+            updateTile(r, c);
+        }
+
+        function handleMineHit(isMe) {
+            if (config.mode === 'race') {
+                // In race, if I hit a mine, I lose immediately, they win
+                send('GAME_OVER', { winner: 'them', reason: 'Opponent detonated!' });
+                handleGameOver('them', 'You exploded!');
             }
+            else if (config.mode === 'coop') {
+                // Team death
+                send('GAME_OVER', { winner: 'none', reason: 'Team Wiped Out' });
+                handleGameOver('none', 'You exploded! Team Lost.');
+            }
+            else {
+                // Turn based: I lose, they win
+                send('GAME_OVER', { winner: 'them', reason: 'Opponent detonated!' });
+                handleGameOver('them', 'You exploded!');
+            }
+        }
+
+        function handleWin() {
+            send('GAME_OVER', { winner: 'them', reason: 'Opponent Cleared the Board!' });
+            handleGameOver('me', 'Level Cleared!');
         }
 
         function handleGameOver(winner, reason) {
             gameActive = false;
             ui.gameOverModal.classList.remove('hidden');
 
-            const didIWin = (winner === 'opponent' && reason.includes('detonated')) ? false : true;
-            // Logic correction:
-            // If I called handleGameOver('opponent', 'You detonated'), winner is 'opponent' (the other guy wins).
+            // Reveal Board
+            revealMines();
 
-            // Let's simplify the args:
-            // Local call: handleGameOver(false, "You hit a mine");
-            // Remote packet: handleGameOver(true, "Opponent hit a mine");
-
-            if (winner === 'host') {
-                // Logic is slightly ambiguous with the strings. Let's trust the "reason" or boolean.
-                // Let's rely on "myTurn" state when mine was hit? 
-            }
-
-            // Simply:
-            if (reason.includes('You')) {
-                // I lost
-                ui.gameOverTitle.innerText = "DEFEAT";
-                ui.gameOverTitle.className = "text-4xl font-bold text-red-500 mb-2";
-                ui.gameOverIcon.innerHTML = '<i class="fas fa-skull-crossbones text-red-500"></i>';
-                ui.gameOverMsg.innerText = "You triggered a mine!";
-
-                // Reveal all mines
-                revealAllMines();
-            } else {
-                // I won
+            if (winner === 'me') {
                 ui.gameOverTitle.innerText = "VICTORY";
                 ui.gameOverTitle.className = "text-4xl font-bold text-emerald-400 mb-2";
                 ui.gameOverIcon.innerHTML = '<i class="fas fa-trophy text-emerald-400"></i>';
-                ui.gameOverMsg.innerText = "Opponent triggered a mine!";
+            } else if (winner === 'none') {
+                ui.gameOverTitle.innerText = "DEFEAT";
+                ui.gameOverTitle.className = "text-4xl font-bold text-red-500 mb-2";
+                ui.gameOverIcon.innerHTML = '<i class="fas fa-bomb text-red-500"></i>';
+            } else {
+                ui.gameOverTitle.innerText = "DEFEAT";
+                ui.gameOverTitle.className = "text-4xl font-bold text-red-500 mb-2";
+                ui.gameOverIcon.innerHTML = '<i class="fas fa-skull-crossbones text-red-500"></i>';
+            }
+            ui.gameOverMsg.innerText = reason;
+        }
+
+        /* --- Mouse Sync --- */
+        function throttle(func, limit) {
+            let inThrottle;
+            return function () {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
             }
         }
 
-        function revealAllMines() {
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (board[r][c].isMine && !board[r][c].isOpen) {
+        const sendMousePos = throttle((r, c) => {
+            if (gameActive && (config.mode === 'coop' || config.mode === 'turn')) {
+                send('MOUSE_MOVE', { r, c });
+            }
+        }, 100);
+
+        function updateOpponentCursor(pos) {
+            // Remove old
+            const old = document.querySelector('.opponent-cursor');
+            if (old) old.remove();
+
+            if (pos.r === -1) return; // off grid
+
+            // Find new tile
+            const idx = pos.r * config.cols + pos.c;
+            const tile = ui.grid.children[idx];
+            if (tile) {
+                const cursor = document.createElement('div');
+                cursor.className = 'opponent-cursor animate-pulse';
+                tile.appendChild(cursor);
+            }
+        }
+
+        /* --- Rendering & UI --- */
+        function renderGrid() {
+            ui.grid.style.gridTemplateColumns = `repeat(${config.cols}, minmax(0, 1fr))`;
+            ui.grid.innerHTML = '';
+
+            // Responsive sizing
+            const isMobile = window.innerWidth < 640;
+            const maxH = window.innerHeight - (isMobile ? 180 : 220);
+            const maxW = window.innerWidth - (isMobile ? 16 : 40);
+            const sizeByH = Math.floor(maxH / config.rows);
+            const sizeByW = Math.floor(maxW / config.cols);
+            const tileSize = Math.min(sizeByH, sizeByW, isMobile ? 30 : 40);
+
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = `tile w-full h-full flex justify-center items-center font-bold text-sm sm:text-base cursor-pointer rounded-sm tile-closed`;
+                    cell.style.width = `${tileSize}px`;
+                    cell.style.height = `${tileSize}px`;
+
+                    // Events
+                    cell.onclick = () => handleLocalClick(r, c);
+                    cell.oncontextmenu = (e) => { e.preventDefault(); handleLocalFlag(r, c); };
+
+                    // Mobile Long Press
+                    let timer;
+                    cell.ontouchstart = () => { timer = setTimeout(() => handleLocalFlag(r, c), 400); };
+                    cell.ontouchend = () => clearTimeout(timer);
+
+                    // Hover Sync
+                    cell.onmouseenter = () => sendMousePos(r, c);
+
+                    ui.grid.appendChild(cell);
+                }
+            }
+            ui.grid.onmouseleave = () => sendMousePos(-1, -1);
+        }
+
+        function updateTile(r, c) {
+            const idx = r * config.cols + c;
+            const cell = ui.grid.children[idx];
+            const d = board[r][c];
+
+            // Class Reset
+            cell.className = cell.className.replace('tile-closed', '').replace('tile-open', '');
+            cell.classList.add(d.isOpen ? 'tile-open' : 'tile-closed');
+
+            cell.innerHTML = '';
+
+            // Append Cursor if exists (don't destroy it)
+            // Actually re-rendering innerHTML kills the cursor. 
+            // Better approach: check for cursor element and re-add it.
+            const hasCursor = cell.querySelector('.opponent-cursor');
+
+            if (d.isOpen) {
+                if (d.isMine) {
+                    cell.innerHTML = '<i class="fas fa-bomb text-red-500 animate-bounce"></i>';
+                    cell.classList.add('bg-red-900/50');
+                } else if (d.count > 0) {
+                    cell.innerText = d.count;
+                    cell.classList.add(`num-${d.count}`);
+                }
+            } else if (d.isFlagged) {
+                cell.innerHTML = '<i class="fas fa-flag text-red-400 text-xs"></i>';
+            }
+
+            if (hasCursor) cell.appendChild(hasCursor);
+        }
+
+        function updateHeaderUI() {
+            // Turn Indicator
+            if (config.mode === 'turn') {
+                if (myTurn) {
+                    ui.playerIndicator.className = "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/50 transform scale-105 transition-all";
+                    ui.turnText.innerText = "YOUR TURN";
+                    ui.gridContainer.classList.add('turn-active-border');
+                    ui.gridContainer.classList.add('my-turn-bg');
+                } else {
+                    ui.playerIndicator.className = "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-700 text-gray-400 border border-gray-600 opacity-80";
+                    ui.turnText.innerText = "THEIR TURN";
+                    ui.gridContainer.classList.remove('turn-active-border');
+                    ui.gridContainer.classList.remove('my-turn-bg');
+                }
+            } else {
+                // Static for Coop/Race
+                ui.playerIndicator.className = "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-600 text-white border border-emerald-500";
+                ui.turnText.innerText = "ACTIVE";
+                ui.gridContainer.classList.remove('turn-active-border');
+                ui.gridContainer.classList.remove('my-turn-bg');
+            }
+
+            ui.mineCount.innerText = minesRemaining - countFlags();
+        }
+
+        function countFlags() {
+            let f = 0;
+            board.forEach(row => row.forEach(cell => { if (cell.isFlagged) f++; }));
+            return f;
+        }
+
+        function updateRaceProgress() {
+            const pct = (clearedCount / totalSafe) * 100;
+            ui.myProgress.innerText = Math.floor(pct) + '%';
+            send('RACE_PROGRESS', { pct });
+        }
+
+        function revealMines() {
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
+                    if (board[r][c].isMine) {
                         board[r][c].isOpen = true;
                         updateTile(r, c);
                     }
@@ -672,27 +895,12 @@
             }
         }
 
-        let rematchRequested = false;
         function requestRematch() {
-            if (rematchRequested) return;
-            rematchRequested = true;
             ui.rematchStatus.innerText = "Waiting for opponent...";
-
-            if (conn && conn.open) {
-                send('REMATCH_REQ', {});
-                if (ui.rematchStatus.innerText.includes("Opponent wants")) {
-                    // Both agreed
-                    send('REMATCH_ACK', {});
-                    if (isHost) setupGame();
-                }
-            }
+            send('REMATCH_REQ', {});
         }
-
-        // Initial setup visuals
-        createBoard(ROWS, COLS, 0); // Dummy board for background
-        renderGrid();
 
     </script>
 </body>
 
-</html>
+</html
