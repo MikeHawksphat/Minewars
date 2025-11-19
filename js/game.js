@@ -61,10 +61,7 @@ const MineWars = (() => {
         if (data.type === 'MOVE') processMove(data.r, data.c, peerId);
         if (data.type === 'FLAG') broadcast({ type: 'FLAG', r: data.r, c: data.c });
         if (data.type === 'REMATCH') startRematch();
-        if (data.type === 'CURSOR') {
-            renderGhost(data.x, data.y, peerId);
-            broadcast({ type: 'CURSOR', x: data.x, y: data.y, id: peerId });
-        }
+        if (data.type === 'CURSOR') broadcast({ type: 'CURSOR', r: data.r, c: data.c, id: peerId });
     }
 
     function handleClientData(data) {
@@ -84,7 +81,7 @@ const MineWars = (() => {
             }
         }
         if (data.type === 'GAME_OVER') endGame(data.win, data.msg);
-        if (data.type === 'CURSOR') renderGhost(data.x, data.y, data.id);
+        if (data.type === 'CURSOR') renderGhost(data.r, data.c, data.id);
     }
 
     // --- LOBBY LOGIC ---
@@ -109,11 +106,7 @@ const MineWars = (() => {
 
     function setConfig(key, val) {
         if (!state.isHost) return; state.config[key] = val;
-        if (key === 'size') {
-            document.querySelectorAll('.cfg-btn-size').forEach(b => { b.classList.remove('ring-1', 'ring-indigo-500', 'text-indigo-300'); if (b.dataset.val === val) b.classList.add('ring-1', 'ring-indigo-500', 'text-indigo-300'); });
-            const customInputs = document.getElementById('custom-size-inputs');
-            if (val === 'custom') customInputs.classList.remove('hidden'); else customInputs.classList.add('hidden');
-        }
+        if (key === 'size') document.querySelectorAll('.cfg-btn-size').forEach(b => { b.classList.remove('ring-1', 'ring-indigo-500', 'text-indigo-300'); if (b.dataset.val === val) b.classList.add('ring-1', 'ring-indigo-500', 'text-indigo-300'); });
         syncLobby();
     }
 
@@ -135,20 +128,7 @@ const MineWars = (() => {
     // --- GAME LOGIC ---
 
     function startGame() {
-        let cfg;
-        if (state.config.size === 'custom') {
-            cfg = {
-                r: parseInt(document.getElementById('custom-rows').value) || 20,
-                c: parseInt(document.getElementById('custom-cols').value) || 30,
-                m: parseInt(document.getElementById('custom-mines').value) || 100
-            };
-            // Clamp values
-            cfg.r = Math.max(5, Math.min(50, cfg.r));
-            cfg.c = Math.max(5, Math.min(50, cfg.c));
-            cfg.m = Math.max(1, Math.min(cfg.r * cfg.c - 9, cfg.m));
-        } else {
-            cfg = PRESETS[state.config.size];
-        }
+        const cfg = PRESETS[state.config.size];
         state.config.rows = cfg.r; state.config.cols = cfg.c;
         let mines = [], board = [];
         let attempts = 0;
@@ -236,10 +216,6 @@ const MineWars = (() => {
         ui.grid.style.setProperty('--cols', state.config.cols);
 
         ui.grid.innerHTML = ''; ui.mineCount.innerText = state.minesLeft;
-        ui.grid.style.position = 'relative'; // Ensure relative positioning for cursors
-        ui.grid.onmousemove = (e) => sendCursor(e);
-        ui.grid.onmouseleave = () => sendCursor(null);
-
         state.board.forEach((row, r) => {
             row.forEach((tile, c) => {
                 const div = document.createElement('div');
@@ -249,6 +225,7 @@ const MineWars = (() => {
                     if (e.button === 2) rightClickTile(r, c);
                 };
                 div.oncontextmenu = (e) => e.preventDefault();
+                div.onmouseenter = () => sendCursor(r, c);
                 ui.grid.appendChild(div);
             });
         });
@@ -300,7 +277,6 @@ const MineWars = (() => {
 
     function rightClickTile(r, c) {
         if (state.board[r][c].isOpen) return;
-        if (!state.isHost) return; // Only host can place flags
         const t = ui.grid.children[r * state.config.cols + c];
         const hasFlag = t.querySelector('.fa-flag');
         if (hasFlag) { hasFlag.remove(); updateMineCount(1); } else { t.innerHTML += '<i class="fas fa-flag text-red-500 text-xs absolute drop-shadow-md"></i>'; updateMineCount(-1); }
@@ -401,43 +377,15 @@ const MineWars = (() => {
     }
 
     let lastSent = 0;
-    function sendCursor(e) {
-        if (Date.now() - lastSent > 30) {
-            let payload;
-            if (e) {
-                const rect = ui.grid.getBoundingClientRect();
-                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-                payload = { type: 'CURSOR', x, y, id: peer.id };
-            } else {
-                // Cursor left grid
-                payload = { type: 'CURSOR', x: -1, y: -1, id: peer.id };
-            }
-            state.isHost ? broadcast(payload) : connMap['host'].send(payload);
-            lastSent = Date.now();
-        }
-    }
-
-    function renderGhost(x, y, id) {
+    function sendCursor(r, c) { if (Date.now() - lastSent > 50) { state.isHost ? broadcast({ type: 'CURSOR', r, c, id: peer.id }) : connMap['host'].send({ type: 'CURSOR', r, c }); lastSent = Date.now(); } }
+    function renderGhost(r, c, id) {
         if (id === peer.id) return;
-        let el = document.getElementById(`cursor-${id}`);
-
-        if (x < 0 || y < 0) {
-            if (el) el.remove();
-            return;
-        }
-
-        if (!el) {
+        document.querySelectorAll(`.cursor-${id}`).forEach(e => e.remove());
+        const el = ui.grid.children[r * state.config.cols + c];
+        if (el) {
             const p = players.find(pl => pl.id === id);
-            if (!p) return;
-            el = document.createElement('div');
-            el.id = `cursor-${id}`;
-            el.className = 'real-cursor';
-            el.innerHTML = `<i class="fas fa-mouse-pointer" style="color:${p.color}"></i><span class="ml-2 text-xs font-bold bg-black/50 px-1 rounded text-white whitespace-nowrap">${p.name}</span>`;
-            ui.grid.appendChild(el);
+            if (p) el.innerHTML += `<div class="ghost-cursor absolute inset-0 cursor-${id}" style="color:${p.color}"></div>`;
         }
-        el.style.left = (x * 100) + '%';
-        el.style.top = (y * 100) + '%';
     }
 
     return { initHost, joinInput, reset, copyCode, setConfig, updateSlider, toggleModeDD, selectModeUI, startGame, toggleSafeStart, showExitModal, requestRematch: () => { state.isHost ? startRematch() : (connMap['host'].send({ type: 'REMATCH' }), document.getElementById('rematch-status').innerText = "Sent...") }, leaveGame: () => { reset() } };
