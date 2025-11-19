@@ -61,7 +61,7 @@ const MineWars = (() => {
         if (data.type === 'MOVE') processMove(data.r, data.c, peerId);
         if (data.type === 'FLAG') broadcast({ type: 'FLAG', r: data.r, c: data.c });
         if (data.type === 'REMATCH') startRematch();
-        if (data.type === 'CURSOR') broadcast({ type: 'CURSOR', r: data.r, c: data.c, id: peerId });
+        if (data.type === 'CURSOR') broadcast({ type: 'CURSOR', x: data.x, y: data.y, id: peerId });
     }
 
     function handleClientData(data) {
@@ -81,7 +81,7 @@ const MineWars = (() => {
             }
         }
         if (data.type === 'GAME_OVER') endGame(data.win, data.msg);
-        if (data.type === 'CURSOR') renderGhost(data.r, data.c, data.id);
+        if (data.type === 'CURSOR') renderCursor(data.x, data.y, data.id);
     }
 
     // --- LOBBY LOGIC ---
@@ -106,7 +106,24 @@ const MineWars = (() => {
 
     function setConfig(key, val) {
         if (!state.isHost) return; state.config[key] = val;
-        if (key === 'size') document.querySelectorAll('.cfg-btn-size').forEach(b => { b.classList.remove('ring-1', 'ring-indigo-500', 'text-indigo-300'); if (b.dataset.val === val) b.classList.add('ring-1', 'ring-indigo-500', 'text-indigo-300'); });
+        if (key === 'size') {
+            document.querySelectorAll('.cfg-btn-size').forEach(b => {
+                b.classList.remove('ring-1', 'ring-indigo-500', 'text-indigo-300');
+                if (b.dataset.val === val) b.classList.add('ring-1', 'ring-indigo-500', 'text-indigo-300');
+            });
+            const customInputs = document.getElementById('custom-size-inputs');
+            if (customInputs) customInputs.classList.toggle('hidden', val !== 'custom');
+            if (val === 'custom') updateCustom();
+        }
+        syncLobby();
+    }
+
+    function setSize(s) { setConfig('size', s); }
+    function updateCustom() {
+        const r = parseInt(document.getElementById('inp-rows').value) || 20;
+        const c = parseInt(document.getElementById('inp-cols').value) || 20;
+        const m = parseInt(document.getElementById('inp-mines').value) || 50;
+        state.config.custom = { r, c, m };
         syncLobby();
     }
 
@@ -128,7 +145,9 @@ const MineWars = (() => {
     // --- GAME LOGIC ---
 
     function startGame() {
-        const cfg = PRESETS[state.config.size];
+        let cfg;
+        if (state.config.size === 'custom') cfg = state.config.custom || { r: 20, c: 20, m: 50 };
+        else cfg = PRESETS[state.config.size];
         state.config.rows = cfg.r; state.config.cols = cfg.c;
         let mines = [], board = [];
         let attempts = 0;
@@ -214,6 +233,13 @@ const MineWars = (() => {
 
         ui.grid.style.setProperty('--rows', state.config.rows);
         ui.grid.style.setProperty('--cols', state.config.cols);
+        ui.grid.style.position = 'relative';
+        ui.grid.onmousemove = (e) => {
+            const rect = ui.grid.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+            sendCursor(x, y);
+        };
 
         ui.grid.innerHTML = ''; ui.mineCount.innerText = state.minesLeft;
         state.board.forEach((row, r) => {
@@ -225,7 +251,7 @@ const MineWars = (() => {
                     if (e.button === 2) rightClickTile(r, c);
                 };
                 div.oncontextmenu = (e) => e.preventDefault();
-                div.onmouseenter = () => sendCursor(r, c);
+                // div.onmouseenter = () => sendCursor(r, c); // Removed tile-based cursor
                 ui.grid.appendChild(div);
             });
         });
@@ -276,6 +302,7 @@ const MineWars = (() => {
     }
 
     function rightClickTile(r, c) {
+        if (!state.isHost) return;
         if (state.board[r][c].isOpen) return;
         const t = ui.grid.children[r * state.config.cols + c];
         const hasFlag = t.querySelector('.fa-flag');
@@ -377,16 +404,24 @@ const MineWars = (() => {
     }
 
     let lastSent = 0;
-    function sendCursor(r, c) { if (Date.now() - lastSent > 50) { state.isHost ? broadcast({ type: 'CURSOR', r, c, id: peer.id }) : connMap['host'].send({ type: 'CURSOR', r, c }); lastSent = Date.now(); } }
-    function renderGhost(r, c, id) {
+    function sendCursor(x, y) { if (Date.now() - lastSent > 40) { const d = { type: 'CURSOR', x, y, id: peer.id }; state.isHost ? broadcast(d) : connMap['host'].send(d); lastSent = Date.now(); } }
+
+    function renderCursor(x, y, id) {
+        if (state.isHost) return;
         if (id === peer.id) return;
-        document.querySelectorAll(`.cursor-${id}`).forEach(e => e.remove());
-        const el = ui.grid.children[r * state.config.cols + c];
-        if (el) {
+        let el = document.getElementById(`cursor-${id}`);
+        if (!el) {
             const p = players.find(pl => pl.id === id);
-            if (p) el.innerHTML += `<div class="ghost-cursor absolute inset-0 cursor-${id}" style="color:${p.color}"></div>`;
+            if (!p) return;
+            el = document.createElement('div');
+            el.id = `cursor-${id}`;
+            el.className = 'absolute w-3 h-3 rounded-full pointer-events-none z-50 transition-all duration-75 border border-white shadow-sm';
+            el.style.backgroundColor = p.color;
+            ui.grid.appendChild(el);
         }
+        el.style.left = (x * 100) + '%';
+        el.style.top = (y * 100) + '%';
     }
 
-    return { initHost, joinInput, reset, copyCode, setConfig, updateSlider, toggleModeDD, selectModeUI, startGame, toggleSafeStart, showExitModal, requestRematch: () => { state.isHost ? startRematch() : (connMap['host'].send({ type: 'REMATCH' }), document.getElementById('rematch-status').innerText = "Sent...") }, leaveGame: () => { reset() } };
+    return { initHost, joinInput, reset, copyCode, setConfig, setSize, updateCustom, updateSlider, toggleModeDD, selectModeUI, startGame, toggleSafeStart, showExitModal, requestRematch: () => { state.isHost ? startRematch() : (connMap['host'].send({ type: 'REMATCH' }), document.getElementById('rematch-status').innerText = "Sent...") }, leaveGame: () => { reset() } };
 })();
